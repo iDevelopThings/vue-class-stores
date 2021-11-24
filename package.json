@@ -1,0 +1,27 @@
+{
+  "name": "vue-class-stores",
+  "version": "0.0.58",
+  "description": "Use classes to handle state in vuejs. This is a webpack plugin that will generate type definitions and globally init your stores.\n\nTopics\nResources\n",
+  "scripts": {
+    "build-package": "tsc --build tsconfig.prod.json --clean && tsc --build tsconfig.prod.json",
+    "build-package-watch": "tsc --build tsconfig.prod.json --clean && tsc --build tsconfig.prod.json --watch",
+    "postpublish": "PACKAGE_VERSION=$(cat package.json | grep version | head -1 | awk -F: '{ print $2 }' | sed 's/[\",]//g' | tr -d '[[:space:]]') && git tag $PACKAGE_VERSION && git push --tags",
+    "deploy-update": "./dist.sh"
+  },
+  "keywords": [],
+  "repository": {
+    "url": "https://github.com/iDevelopThings/vue-class-stores",
+    "type": "github"
+  },
+  "author": {
+    "name": "iDevelopThings",
+    "url": "https://github.com/iDevelopThings"
+  },
+  "license": "MIT",
+  "dependencies": {
+    "reflect-metadata": "^0.1.13"
+  },
+  "devDependencies": {
+    "typescript": "^4.5.2"
+  }
+}
