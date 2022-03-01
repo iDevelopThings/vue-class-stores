@@ -1,5 +1,8 @@
+import {WatchOptions} from "vue";
+
 export type StoreWatcher = {
 	method: string;
+	watchOptions: WatchOptions;
 	property: string;
 }
 
