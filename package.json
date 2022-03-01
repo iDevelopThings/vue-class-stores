@@ -1,6 +1,6 @@
 {
   "name": "vue-class-stores",
-  "version": "0.0.61",
+  "version": "0.0.62",
   "description": "Use classes to handle state in vuejs. This is a webpack plugin that will generate type definitions and globally init your stores.\n\nTopics\nResources\n",
   "scripts": {
     "build-package": "tsc --build tsconfig.prod.json --clean && tsc --build tsconfig.prod.json",
