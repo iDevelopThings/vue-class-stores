@@ -1,24 +1,46 @@
 {
   "compilerOptions": {
-    "outDir": "./package/",
-    "sourceMap": true,
-    "strict": false,
-    "module": "CommonJS",
-    "moduleResolution": "node",
-    "target": "es5",
-    "skipLibCheck": true,
-    "esModuleInterop": true,
-    "experimentalDecorators": true,
-    "declaration": true,
+    "target": "ESNext",
+    "useDefineForClassFields": true,
+    "module": "ESNext",
     "lib": [
       "ESNext",
       "DOM"
     ],
-    "typeRoots": [
-      "node_modules/@types"
-    ]
+    "moduleResolution": "Node",
+    "strict": false,
+    "sourceMap": true,
+    "resolveJsonModule": true,
+    "isolatedModules": true,
+    "esModuleInterop": true,
+    "noEmit": true,
+    "keyofStringsOnly": true,
+    "skipLibCheck": true,
+    "baseUrl": ".",
+    "rootDir": "./src",
+    "types": [
+      "vitest/globals",
+      "src/Test/Stores/stores_extension.d.ts"
+    ],
+    "paths": {
+      "@idevelopthings/vue-class-stores/vue": [
+        "src/Lib/index.ts"
+      ],
+      "@idevelopthings/vue-class-stores/dev-tools": [
+        "src/DevTools/index.ts"
+      ],
+      "@idevelopthings/vue-class-stores/vite": [
+        "src/VitePlugin/index.ts"
+      ]
+    }
   },
   "include": [
-    "./src/**/*"
+    "src/DevTools",
+    "src/Lib",
+    "src/Test",
+    "src/VitePlugin"
+  ],
+  "exclude": [
+    "node_modules"
   ]
 }

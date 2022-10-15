@@ -1,33 +1,97 @@
 {
-  "name": "vue-class-stores",
-  "version": "0.0.62",
-  "description": "Use classes to handle state in vuejs. This is a webpack plugin that will generate type definitions and globally init your stores.\n\nTopics\nResources\n",
-  "scripts": {
-    "build-package": "tsc --build tsconfig.prod.json --clean && tsc --build tsconfig.prod.json",
-    "build-package-watch": "tsc --build tsconfig.prod.json --clean && tsc --build tsconfig.prod.json --watch",
-    "postpublish": "PACKAGE_VERSION=$(cat package.json | grep version | head -1 | awk -F: '{ print $2 }' | sed 's/[\",]//g' | tr -d '[[:space:]]') && git tag $PACKAGE_VERSION && git push --tags",
-    "deploy-update": "./dist.sh"
-  },
-  "files": [
-    "dist"
+  "name": "@idevelopthings/vue-class-stores",
+  "type": "module",
+  "description": "Powerful class based stores for vue 3",
+  "keywords": [
+    "vue",
+    "vue3",
+    "state-management",
+    "store",
+    "state",
+    "vuex",
+    "vue3-state-management",
+    "vue3-store",
+    "vue3-state",
+    "vue3-vuex"
   ],
-  "main": "dist/index.js",
-  "types": "dist/index.d.ts",
-  "keywords": [],
-  "repository": {
-    "url": "https://github.com/iDevelopThings/vue-class-stores",
-    "type": "github"
-  },
   "author": {
     "name": "iDevelopThings",
-    "url": "https://github.com/iDevelopThings"
+    "url": "https://github.com/idevelopthings"
   },
+  "readme": "readme.md",
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/idevelopthings/vue-class-stores"
+  },
+  "version": "1.0.0",
   "license": "MIT",
+  "sideEffects": false,
+  "typesVersions": {
+    "*": {
+      "vue": [
+        "./dist/Lib/index.d.ts"
+      ],
+      "dev-tools": [
+        "./dist/DevTools/index.d.ts"
+      ],
+      "vite": [
+        "./dist/VitePlugin/index.d.ts"
+      ]
+    }
+  },
+  "exports": {
+    "./vue": {
+      "import": "./dist/Lib/index.js",
+      "require": "./dist/Lib/index.cjs",
+      "node": "./dist/Lib/index.cjs",
+      "types": "./dist/Lib/index.d.ts"
+    },
+    "./dev-tools": {
+      "import": "./dist/DevTools/index.js",
+      "require": "./dist/DevTools/index.cjs",
+      "node": "./dist/DevTools/index.cjs",
+      "types": "./dist/DevTools/index.d.ts"
+    },
+    "./vite": {
+      "import": "./dist/VitePlugin/index.js",
+      "require": "./dist/VitePlugin/index.cjs",
+      "node": "./dist/VitePlugin/index.cjs",
+      "types": "./dist/VitePlugin/index.d.ts"
+    }
+  },
+  "files": [
+    "dist/Common/**/*",
+    "dist/DevTools/**/*",
+    "dist/Lib/**/*",
+    "dist/VitePlugin/**/*"
+  ],
+  "scripts": {
+    "dev": "vite",
+    "build": "tsc && vite build",
+    "preview": "vite preview",
+    "test": "vitest run --no-threads"
+  },
   "dependencies": {
-    "reflect-metadata": "^0.1.13"
+    "vue": "^3.2.40"
   },
   "devDependencies": {
-    "typescript": "^4.5.2",
-    "vue": "^3.2.31"
+    "postcss-import": "^15.0.0",
+    "autoprefixer": "^10.4.12",
+    "postcss": "^8.4.17",
+    "tailwindcss": "^3.1.8",
+    "vite-plugin-inspect": "^0.7.5",
+    "klona": "^2.0.5",
+    "@rollup/pluginutils": "^5.0.1",
+    "@types/lodash": "^4.14.186",
+    "@vitejs/plugin-vue": "^3.1.0",
+    "@vue/devtools-api": "^6.4.4",
+    "@vue/test-utils": "^2.1.0",
+    "chalk": "^5.1.2",
+    "fs-jetpack": "^5.0.0",
+    "typescript": "^4.8.4",
+    "vite": "^3.1.4",
+    "vite-plugin-build": "^0.6.0",
+    "vite-plugin-dts": "^1.6.4",
+    "vitest": "latest"
   }
 }

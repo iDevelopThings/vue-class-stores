@@ -1,15 +1,4 @@
-node_modules/
-.DS_Store
-/.idea/.gitignore
-/.idea/codeStyles/codeStyleConfig.xml
-/.idea/jsLibraryMappings.xml
-/.idea/misc.xml
-/.idea/modules.xml
-/.idea/inspectionProfiles/Project_Default.xml
-/.idea/vcs.xml
-/.idea/VueClassStore.iml
-/apptestdist/
-/package/
-dist-local.sh
-/apptest/app.dist.js
+# Project exclude paths
+/node_modules/
+/.idea/
 /dist/
