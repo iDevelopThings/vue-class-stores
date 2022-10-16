@@ -10,10 +10,12 @@ export type PluginConfig = {
 export type AllConfig = {
 	projectRootDirectory: typeof jetpack,
 	storesDirectory: typeof jetpack,
+	storeLoaderFile: string,
 }
 
 export type FullConfig = AllConfig & PluginConfig;
 
 export const defaultPluginConfig: Partial<FullConfig> = {
 	storesFileName : 'stores.d.ts',
+	storeLoaderFile   : 'StoreLoader.ts',
 };

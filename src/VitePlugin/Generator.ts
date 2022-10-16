@@ -1,9 +1,15 @@
 import chalk from "chalk";
+import jetpack from "fs-jetpack";
+import {FSJetpack} from "fs-jetpack/types";
 import _ from "lodash";
 import * as path from "path";
 import ts from "typescript";
-import {formatVueBindingName} from "../Common/Formatting";
-import {basicLog, infoLog, successLog, warnLog} from "./Logger";
+import crypto from 'crypto';
+import {formatVueBindingName} from "../Common";
+import {createLazyImportGlobNode, createRelativeImportNode} from "./Builders/Imports";
+import {unwrappableNode} from "./Builders/Object";
+import {createStoreLoaderModule} from "./Builders/StoreLoader";
+import {basicLog, errorLog, infoLog, successLog, warnLog} from "./Logger";
 import {FullConfig} from "./types";
 
 const {factory} = ts;
@@ -25,25 +31,56 @@ export type StoreInfo = {
 	exportName?: string,
 }
 
+const GENERATED_FILE_DIR = 'Generated';
 
 export class Context {
 
 	public program: ts.Program;
-	public filePaths: string[] = [];
 
+	/**
+	 * File paths to all files in the project(loaded by typescript compiler)
+	 * @type {string[]}
+	 */
+	public filePaths: string[]                  = [];
+	/**
+	 * File paths to all of our store files in the project
+	 * @type {string[]}
+	 */
+	public storeFilePaths: string[];
+	/**
+	 * When we first load our stores, we'll take a hash of the content
+	 * Later on this hash will be used when there is a change, mainly to
+	 * determine if we need to do some file writes, when writing stores.d.ts,
+	 * even if contents are the same, this makes vite do a full page reload...
+	 * @type {Map<string, string>}
+	 */
+	public storeFileHashes: Map<string, string> = new Map();
+
+	/**
+	 * All of the store modules in our project
+	 *
+	 * @type {{module: ts.SourceFile, store: StoreMeta}[]}
+	 */
 	public modules: { module: ts.SourceFile, store: StoreMeta }[] = [];
 
 	public stores: StoreMeta[] = [];
 
-	public config: FullConfig;
+	public config: Partial<FullConfig>;
 	public compilerHost: ts.CompilerHost;
 	public printer: ts.Printer;
 	public typeChecker: ts.TypeChecker;
+	public parsedCommandLine: ts.ParsedCommandLine;
 
 	public static instance: Context;
-	private parsedCommandLine: ts.ParsedCommandLine;
 
-	public init(pluginConfig: FullConfig) {
+	/**
+	 * This is the directory where all of our generated files will be stored
+	 * @type {FSJetpack}
+	 * @private
+	 */
+	public generatedDir: FSJetpack;
+
+	public init(pluginConfig: Partial<FullConfig>) {
 		Context.instance = this;
 
 		this.config = pluginConfig;
@@ -52,12 +89,9 @@ export class Context {
 		if (!configPath) {
 			throw new Error("Could not find a valid 'tsconfig.json'.");
 		}
-		const configFile       = ts.readConfigFile(configPath, ts.sys.readFile);
-		this.parsedCommandLine = ts.parseJsonConfigFileContent(
-			configFile.config,
-			ts.sys,
-			"./"
-		);
+		this.parsedCommandLine = ts.parseJsonConfigFileContent(ts.readConfigFile(configPath, ts.sys.readFile).config, ts.sys, "./");
+
+		this.generatedDir = jetpack.dir(this.config.storesDirectory.path(GENERATED_FILE_DIR));
 
 		this.setFilePaths();
 
@@ -66,9 +100,17 @@ export class Context {
 		this.printer      = ts.createPrinter({newLine : ts.NewLineKind.LineFeed});
 		this.typeChecker  = this.program.getTypeChecker();
 
-		this.reloadModules();
+		this.reloadModules(false);
+
+		this.loadGeneratedFileHash(pluginConfig.storesFileName);
+		this.loadGeneratedFileHash(pluginConfig.storeLoaderFile);
 	}
 
+	/**
+	 * Set the store file paths & all project file paths
+	 *
+	 * @returns {string[]}
+	 */
 	public setFilePaths(): string[] {
 		const paths = this.config.storesDirectory.find({
 			directories : false,
@@ -79,22 +121,72 @@ export class Context {
 			filePath => ts.sys.resolvePath(this.config.storesDirectory.path(filePath))
 		);
 
+		this.storeFilePaths = paths;
+
 		return this.filePaths = _.uniq(paths.concat(...this.parsedCommandLine.fileNames.map(
 			f => ts.sys.resolvePath(f)
 		)));
 	}
 
-	public reloadModules() {
-		this.setFilePaths();
+	/**
+	 * Load all of our store modules and create a "store meta" class.
+	 */
+	public reloadModules(reloadFilePaths: boolean = true) {
+		if (reloadFilePaths) {
+			this.setFilePaths();
+		}
 
 		this.modules = this.program.getSourceFiles()
-			.filter(module => this.filePaths.includes(module.fileName))
-			.map(module => {
-				return {
-					module,
-					store : new StoreMeta(module, this.config.storesPath)
-				};
-			});
+			.filter(module => this.storeFilePaths.includes(module.fileName))
+			.map(module => ({module, store : new StoreMeta(module, this.config.storesPath)}));
+
+		for (let module of this.modules) {
+			this.addFileHash(module.module.fileName, module.module.getFullText());
+		}
+	}
+
+	private addFileHash(filePath: string, content: string) {
+		const hash = crypto.createHash('sha256').update(content).digest('hex');
+
+		if (this.storeFileHashes.has(filePath)) {
+			const oldHash = this.storeFileHashes.get(filePath);
+			if (oldHash === hash) {
+				return false;
+			}
+			this.storeFileHashes.set(filePath, hash);
+			warnLog("Store file hash is different: " + filePath);
+			return true;
+		}
+
+		this.storeFileHashes.set(filePath, hash);
+
+		return true;
+	}
+
+	private loadGeneratedFileHash(file: string) {
+		if (this.generatedDir.exists(file)) {
+			const content = this.generatedDir.read(file);
+			this.addFileHash(this.generatedDir.path(file), content);
+		}
+	}
+
+	/**
+	 * MAKE SURE TO PASS A FULL ABSOLUTE PATH TO THIS METHOD!
+	 *
+	 * @param {string} filePath
+	 * @returns {boolean}
+	 * @private
+	 */
+	private fileHasChanged(filePath: string) {
+		const fPath = jetpack.path(filePath);
+		if (!this.storeFileHashes.has(fPath)) {
+			return true;
+		}
+
+		const content = jetpack.read(fPath);
+		const hash    = crypto.createHash('sha256').update(content).digest('hex');
+
+		return this.storeFileHashes.get(filePath) !== hash;
 	}
 
 	process() {
@@ -108,31 +200,40 @@ export class Context {
 	}
 
 	writeFiles() {
+		this.writeStoreDeclaration();
+	}
+
+	private writeStoreDeclaration() {
 		const storeCount = this.stores?.length;
 		if (!storeCount) {
 			warnLog('No stores located... skipping code-gen.');
 			return;
 		}
 
-
 		infoLog('Located', chalk.reset(storeCount), 'stores:');
 		basicLog(this.stores.map(s => "   - " + chalk.reset(s.className)).join('\n'));
 
+		const vueDtsFile = createVueDtsFile(this.stores);
 
-		const vueDtsFile   = createVueDtsFile(this.stores);
-		const storesSource = ts.createSourceFile(this.config.storesFileName, '', ts.ScriptTarget.ES2022, false, ts.ScriptKind.TS);
-		const storesDtsTs  = this.printer.printList(ts.ListFormat.MultiLine, factory.createNodeArray(vueDtsFile), storesSource);
-		this.config.storesDirectory.write(this.config.storesFileName, storesDtsTs);
+		const {didWrite, filePath} = this.writeTsFile(this.generatedDir.path(this.config.storesFileName), vueDtsFile);
+		if (didWrite) {
+			successLog(
+				'Generated stores vue declaration file at:',
+				chalk.reset(this.generatedDir.path(filePath).replace(this.config.projectRoot, ''))
+			);
+		}
 
-		this.config.storesDirectory.write(
-			'StoreMeta.json',
-			JSON.stringify(this.stores, null, 2)
+		const loaderResult = this.writeTsFile(
+			this.generatedDir.path(this.config.storeLoaderFile),
+			createStoreLoaderModule(this.stores)
 		);
+		if (loaderResult.didWrite) {
+			successLog(
+				'Generated store loader file at:',
+				chalk.reset(this.generatedDir.path(loaderResult.filePath).replace(this.config.projectRoot, ''))
+			);
+		}
 
-		successLog(
-			'Generated stores vue declaration file at:',
-			chalk.reset(path.join(this.config.storesPath, this.config.storesFileName).replace(this.config.projectRoot, ''))
-		);
 	}
 
 	rebuild() {
@@ -192,17 +293,9 @@ export class Context {
 
 					for (let member of statement.members) {
 						if (ts.isMethodDeclaration(member)) {
-							//							if (!member.modifiers?.some(m => m.kind === ts.SyntaxKind.PublicKeyword)) continue;
-
 							if (ts.isIdentifier(member.name)) {
 								const action = new ActionMeta(member, member.name.text);
 								actions.push(action);
-
-								for (let param of member.parameters) {
-									if (ts.isIdentifier(param.name)) {
-										action.addParam(param);
-									}
-								}
 							}
 						}
 					}
@@ -223,6 +316,35 @@ export class Context {
 	public getStoreByFilePath(path: string): StoreMeta | undefined {
 		return this.stores.find(s => s.absFilePath === path);
 	}
+
+	private writeTsFile(filePath: string, nodes: ts.Node[]) {
+		const result = {didWrite : false, filePath : filePath};
+
+		const sourceFile = ts.createSourceFile(filePath, '', this.parsedCommandLine.options.target, false, ts.ScriptKind.TS);
+		const source     = this.printer.printList(ts.ListFormat.MultiLine, factory.createNodeArray(nodes), sourceFile);
+
+		result.didWrite = this.writeFile(filePath, source);
+
+		return result;
+	}
+
+	private writeFile(filePath: string, contents: string) {
+		if (!this.addFileHash(filePath, contents)) {
+			return false;
+		}
+
+		jetpack.write(filePath, contents);
+		return true;
+	}
+
+	public static printNode(node: any) {
+		try {
+			const sourceFile = ts.createSourceFile('temp.ts', '', this.instance.parsedCommandLine.options.target, false, ts.ScriptKind.TS);
+			infoLog('Printed node > \n' + this.instance.printer.printNode(ts.EmitHint.Unspecified, node, sourceFile));
+		} catch (error) {
+			errorLog("Failed to print node", error);
+		}
+	}
 }
 
 
@@ -235,6 +357,11 @@ export class StoreMeta {
 	 * The relative path of the store file, for ex, if importing in /src/stores/, and our file is at /src/stores/MyStore.ts, this will be MyStore.ts
 	 */
 	public relStoreFilePath: string;
+	/**
+	 * The relative import path from Stores/.generated/StoreLoader.ts to the store location
+	 * @type {string}
+	 */
+	public loaderImportPath: string;
 	/**
 	 * The name of the store file
 	 */
@@ -258,7 +385,9 @@ export class StoreMeta {
 	constructor(file: ts.SourceFile, absStoresPath: string) {
 		this.absFilePath      = file.fileName;
 		this.name             = path.basename(file.fileName);
-		this.relStoreFilePath = path.relative(absStoresPath, file.fileName);
+		this.relStoreFilePath = path.relative(Context.instance.generatedDir.path(), file.fileName);
+
+		this.loaderImportPath = this.relStoreFilePath; // path.relative(file.fileName, Context.instance.generatedDir.path(Context.instance.config.storeLoaderFile));
 	}
 
 	public isValid() {
@@ -276,14 +405,18 @@ export class StoreMeta {
 			return;
 		}
 
-		/*let value = this.className;
-
-		 if (value.endsWith('Store')) {
-		 value = value.replace('Store', '');
-		 value = value.charAt(0).toLowerCase() + value.slice(1);
-		 }
-		 */
 		this.vueBinding = formatVueBindingName(this.vueBinding, this.className);
+	}
+
+	public metaObject(includeImport: boolean = true) {
+		return {
+			className  : this.className,
+			importPath : this.loaderImportPath,
+			exportName : this.exportName,
+			vueBinding : this.vueBinding,
+			actions    : JSON.parse(JSON.stringify(this.actions)),
+			module     : unwrappableNode(createLazyImportGlobNode(this.loaderImportPath))
+		};
 	}
 }
 
@@ -316,16 +449,6 @@ class ActionMeta {
 				defaultValue,
 			});
 		}
-	}
-
-	addParam(param: ts.ParameterDeclaration) {
-		//		const type = Context.instance.typeChecker.getSignatureFromDeclaration(this.method);
-
-
-		//		this.params.push({
-		//			name : (param.name as any).text,
-		//			type : param.type?.getText()
-		//		});
 	}
 
 	toJSON() {
@@ -366,18 +489,9 @@ function createVueDtsFile(stores: StoreMeta[]): ts.Node[] {
 	 * This will generate our imports:
 	 * import {storeExportName} from "./StoreName";
 	 */
-	const storeImports = stores.map(store => factory.createImportDeclaration(
-		undefined,
-		factory.createImportClause(
-			false,
-			undefined,
-			factory.createNamedImports([
-				factory.createImportSpecifier(false, undefined, factory.createIdentifier(store.exportName))
-			])
-		),
-		factory.createStringLiteral(`./${store.relStoreFilePath.replace('.ts', '')}`),
-		undefined
-	));
+	const storeImports = stores.map(
+		store => createRelativeImportNode([store.exportName], store.relStoreFilePath)
+	);
 
 	/**
 	 * This will generate the main declare module/interface block
@@ -397,22 +511,6 @@ function createVueDtsFile(stores: StoreMeta[]): ts.Node[] {
 		]),
 		ts.NodeFlags.ExportContext /*| ts.NodeFlags.Ambient*/ | ts.NodeFlags.ContextFlags
 	);
-
-
-	//	const imports = stores.map(store => `\timport {${store.exportName}} from './${store.relStoreFilePath.replace('.ts', '')}';`).join('\n');
-
-	//	let contents = [
-	//		`declare module "@vue/runtime-core" {`,
-	//		imports,
-	//		`\tinterface ComponentCustomProperties {`,
-	//		stores.map(store => `\t\t${store.vueBinding}: typeof ${store.exportName};`).join('\n'),
-	//		`\t}`,
-	//		`}`,
-	//		`export {}`
-	//	];
-
-	//	return contents.join('\n');
-
 
 	return [
 		declareModuleBlock,

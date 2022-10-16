@@ -5,10 +5,10 @@ import type {Plugin, ViteDevServer} from "vite";
 import {ResolvedConfig} from 'vite';
 import {Context} from "./Generator";
 import {infoLog} from "./Logger";
-import {AllConfig, defaultPluginConfig, PluginConfig} from "./Types";
+import {defaultPluginConfig, FullConfig, PluginConfig} from "./Types";
 
 
-const pluginConfig: AllConfig & PluginConfig = {
+const pluginConfig: Partial<FullConfig> = {
 	projectRoot          : null,
 	projectRootDirectory : null,
 	storesPath           : null,
