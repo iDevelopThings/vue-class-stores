@@ -4,7 +4,18 @@
 A vite/vue package for elegant class based stores
 </p>
 
-### Getting Started
+# Features
+
+- Fully reactive
+- Ability to be used globally, as small individual stores and used within other stores
+- Simple object orientated and regular javascript architecture for your stores(you just write a class, instead of separating everything into individual actions/getters/mutations)
+- Vue devtools plugin included, ability to inspect/edit your state and call your actions from it
+- Full type completion(I love TS and it's types/auto-completion), code is generated which integrates it into vues types and more!
+- It's beautiful to write code this way and separate all of your applications business logic into a store that it belongs too, I used this approach in vue 2 also, it kept many of my applications code tidy and follow-able
+
+# Setup/Installation
+
+## Package Setup
 
 Install the npm package:
 
@@ -13,7 +24,7 @@ npm install @idevelopthings/vue-class-stores
 yarn add @idevelopthings/vue-class-stores
 ```
 
-#### Vite plugin:
+## Vite plugin:
 
 ```js
 import vue                 from '@vitejs/plugin-vue';
@@ -33,7 +44,7 @@ export default defineConfig({
 });
 ```
 
-#### Vue Plugin:
+## Vue Plugin:
 
 Register the plugin with vue in your main init script
 
@@ -50,7 +61,9 @@ app.mount('#app');
 
 And that's all, now you can get to building!
 
-#### Creating your first store
+# Usage
+
+## Creating your first store
 
 Let's create a store which will be used globally, for this example, it will hold some application state.
 Imagine our application needs to load some data and display an overlay of some kind whilst this is taking place.
@@ -166,7 +179,7 @@ applicationStore.loadSomeData();
 ![img.png](repository/editor-completion.png)
 
 
-### Vue Dev Tools Plugin
+# Vue Dev Tools Plugin
 The package will automatically register the vue devtools plugin for you
 This will allow you to inspect your state and trigger your, actions for testing purposes(although you cannot pass parameters yet :())
 
