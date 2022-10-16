@@ -24,6 +24,37 @@ const config: Partial<SiteData<ThemeConfig>> = {
                     {text: 'Getting Started', link: '/guide/'},
                     {text: 'Creating your first store', link: '/guide/your-first-store'},
                 ]
+            },
+            {
+                text: 'Core Concepts',
+                collapsible: true,
+                collapsed: true,
+                items: [
+                    {
+                        text: 'State',
+                        link: '/core-concepts/state',
+                        items: [
+                            {text: 'Acessing the state', link: '/core-concepts/state#accessing-the-state'},
+                            {text: 'Resetting the state', link: '/core-concepts/state#resetting-the-state'},
+                            {text: 'Mutating the state', link: '/core-concepts/state#mutating-the-state'},
+                        ]
+                    },
+                    {
+                        text: 'Actions',
+                        link: '/core-concepts/actions',
+                        items: [
+                            {text: 'Defining an action', link: '/core-concepts/actions#defining-an-action'},
+                            {text: 'Subscribing to actions', link: '/core-concepts/actions#subscribing-to-actions'},
+                        ]
+                    },
+                    {
+                        text: 'Extensions',
+                        link: '/core-concepts/extending-stores',
+                        items: [
+                            {text: 'Defining an extension', link: '/core-concepts/extending-stores#defining-an-extension'},
+                        ]
+                    },
+                ]
             }
         ]
     }
