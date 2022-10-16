@@ -40,7 +40,7 @@ app.mount('#app');
 ```
 
 For typescript to see your extensions, you do need to create a declaration.
-Let's create `store_extends.d.ts` in our project src dir
+Let's create `store_extensions.d.ts` in our project src dir
 
 ```typescript
 declare module '@idevelopthings/vue-class-stores/vue' {
