@@ -6,6 +6,8 @@ A vite/vue package for elegant class based stores
 
 ### Getting Started
 
+Install the npm package:
+
 ```shell
 npm install @idevelopthings/vue-class-stores
 yarn add @idevelopthings/vue-class-stores
@@ -30,6 +32,23 @@ export default defineConfig({
     ]
 });
 ```
+
+#### Vue Plugin:
+
+Register the plugin with vue in your main init script
+
+```typescript
+import {createApp} from 'vue';
+import {StoreManager} from "@idevelopthings/vue-class-stores/vue";
+import App from './App.vue';
+
+const app = createApp(App);
+// Unfortunately, at the moment, you need to provide this glob import 
+app.use(StoreManager, import.meta.glob('./Stores/*', {eager : true})); 
+app.mount('#app');
+```
+
+And that's all, now you can get to building!
 
 #### Creating your first store
 
@@ -145,3 +164,12 @@ applicationStore.loadSomeData();
 </script>
 ```
 ![img.png](repository/editor-completion.png)
+
+
+### Vue Dev Tools Plugin
+The package will automatically register the vue devtools plugin for you
+This will allow you to inspect your state and trigger your, actions for testing purposes(although you cannot pass parameters yet :())
+
+You can also edit your state from the plugin also :)
+
+![img.png](repository/devtools-plugin.png)
