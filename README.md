@@ -1,4 +1,8 @@
-<img align="center" src="https://vue-class-stores.idt.dev/VueClassStoresLogo.png"/>
+<p align="center" dir="auto">
+  <a href="https://www.npmjs.com/package/@idevelopthings/vue-class-stores" rel="nofollow">
+    <img align="center" src="https://vue-class-stores.idt.dev/VueClassStoresLogo.png"/>
+  </a>
+</p>
 
 <p align="center">
 A vite/vue package for elegant class based stores
@@ -25,68 +29,74 @@ A vite/vue package for elegant class based stores
 - Full type completion(I love TS and it's types/auto-completion), code is generated which integrates it into vues types and more!
 - It's beautiful to write code this way and separate all of your applications business logic into a store that it belongs too, I used this approach in vue 2 also, it kept many of my applications code tidy and follow-able
 
-
 ## Basic Example:
 
 A store for an "todo" application
 
 The store class:
+
 ```typescript
 import {Store} from "@idevelopthings/vue-class-stores/vue";
 import axios from 'axios';
 
 // We defined loading/todos state here
 interface ITodosStore {
-    loading: boolean;
-    todos: ITodo[];
+	loading: boolean;
+	todos: ITodo[];
 }
 
 // The type of our todo object
 export interface ITodo {
-    userId: number;
-    id: number;
-    title: string;
-    completed: boolean;
+	userId: number;
+	id: number;
+	title: string;
+	completed: boolean;
 }
 
 class TodosStore extends Store<TodosStore, ITodosStore>() {
-    get state(): ITodosStore {
-        return {
-            loading: false,
-            todos: [],
-        };
-    }
-    async load() {
-        try {
-            this.$loading = true;
-            this.$todos = (await axios.get<ITodo[]>('https://jsonplaceholder.typicode.com/todos/1')).data;
-            // We could also use this.state.todos = (await axios....)
-        } catch (error) {
-            console.error(error);
-        } finally {
-            this.$loading = false;
-        }
-    }
-    get isLoading(): boolean {
-        return this.$loading;
-    }
-    get todos(): ITodo[] {
-        return this.$todos;
-    }
+	get state(): ITodosStore {
+		return {
+			loading : false,
+			todos   : [],
+		};
+	}
+
+	async load() {
+		try {
+			this.$loading = true;
+			this.$todos   = (await axios.get<ITodo[]>('https://jsonplaceholder.typicode.com/todos/1')).data;
+			// We could also use this.state.todos = (await axios....)
+		} catch (error) {
+			console.error(error);
+		} finally {
+			this.$loading = false;
+		}
+	}
+
+	get isLoading(): boolean {
+		return this.$loading;
+	}
+
+	get todos(): ITodo[] {
+		return this.$todos;
+	}
 }
+
 export const todosStore = new TodosStore();
 ```
 
 The vue SFC:
+
 ```vue
+
 <template>
-  <div v-if="$todos.isLoading"><p>Loading your todos!</p></div>
-  <div v-else>
-    <div v-for="todo in $todos.todos">
-      <p>{{ todo.title }}</p>
-      <p>Is complete? {{ todo.completed }}</p>
-    </div>
-  </div>
+	<div v-if="$todos.isLoading"><p>Loading your todos!</p></div>
+	<div v-else>
+		<div v-for="todo in $todos.todos">
+			<p>{{ todo.title }}</p>
+			<p>Is complete? {{ todo.completed }}</p>
+		</div>
+	</div>
 </template>
 
 <script setup lang="ts">
