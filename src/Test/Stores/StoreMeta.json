@@ -41,6 +41,20 @@
     ]
   },
   {
+    "absFilePath": "/Users/sam/Code/Packages/vue-class-stores/class-stores-rewrite/src/Test/Stores/TodoStore.ts",
+    "relStoreFilePath": "TodoStore.ts",
+    "name": "TodoStore.ts",
+    "className": "TodosStore",
+    "exportName": "todosStore",
+    "vueBinding": "$todos",
+    "actions": [
+      {
+        "name": "load",
+        "params": []
+      }
+    ]
+  },
+  {
     "absFilePath": "/Users/sam/Code/Packages/vue-class-stores/class-stores-rewrite/src/Test/Stores/YeetStore.ts",
     "relStoreFilePath": "YeetStore.ts",
     "name": "YeetStore.ts",

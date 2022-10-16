@@ -1,0 +1,8 @@
+/* .vitepress/theme/custom.css */
+:root {
+    --vp-c-brand: #0094FF;
+    --vp-c-brand-light: #68C0FF;
+    --vp-c-brand-lighter: #68C0FF;
+    --vp-c-brand-dark: #0070C0;
+    --vp-c-brand-darker: #2E6F9E;
+}
