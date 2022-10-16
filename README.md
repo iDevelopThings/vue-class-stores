@@ -1,4 +1,4 @@
-<img align="center" src="/repository/logo.png"/>
+<img align="center" src="https://vue-class-stores.idt.dev/VueClassStoresLogo.png"/>
 
 <p align="center">
 A vite/vue package for elegant class based stores
