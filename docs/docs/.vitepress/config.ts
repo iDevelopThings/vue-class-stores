@@ -58,11 +58,22 @@ const config: Partial<SiteData<ThemeConfig>> = {
                         collapsible: true,
                         collapsed: true,
                         items: [
-                            {text: 'Defining an extension', link: '/core-concepts/extending-stores#defining-an-extension'},
+                            {
+                                text: 'Defining an extension',
+                                link: '/core-concepts/extending-stores#defining-an-extension'
+                            },
                         ]
                     },
                 ]
-            }
+            },
+            {
+                text: 'Configuration',
+                collapsible: true,
+                collapsed: false,
+                items: [
+                    {text: 'Stores', link: '/config/stores'},
+                ]
+            },
         ]
     }
 };
