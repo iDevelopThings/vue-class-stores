@@ -19,7 +19,7 @@ const config: Partial<SiteData<ThemeConfig>> = {
             {
                 text: 'Guide',
                 collapsible: true,
-                collapsed: true,
+                collapsed: false,
                 items: [
                     {text: 'Getting Started', link: '/guide/'},
                     {text: 'Creating your first store', link: '/guide/your-first-store'},
@@ -28,20 +28,25 @@ const config: Partial<SiteData<ThemeConfig>> = {
             {
                 text: 'Core Concepts',
                 collapsible: true,
-                collapsed: true,
+                collapsed: false,
                 items: [
                     {
                         text: 'State',
                         link: '/core-concepts/state',
+                        collapsible: true,
+                        collapsed: true,
                         items: [
                             {text: 'Acessing the state', link: '/core-concepts/state#accessing-the-state'},
                             {text: 'Resetting the state', link: '/core-concepts/state#resetting-the-state'},
                             {text: 'Mutating the state', link: '/core-concepts/state#mutating-the-state'},
+                            {text: 'Watching for changes', link: '/core-concepts/state#watching-for-changes'},
                         ]
                     },
                     {
                         text: 'Actions',
                         link: '/core-concepts/actions',
+                        collapsible: true,
+                        collapsed: true,
                         items: [
                             {text: 'Defining an action', link: '/core-concepts/actions#defining-an-action'},
                             {text: 'Subscribing to actions', link: '/core-concepts/actions#subscribing-to-actions'},
@@ -50,6 +55,8 @@ const config: Partial<SiteData<ThemeConfig>> = {
                     {
                         text: 'Extensions',
                         link: '/core-concepts/extending-stores',
+                        collapsible: true,
+                        collapsed: true,
                         items: [
                             {text: 'Defining an extension', link: '/core-concepts/extending-stores#defining-an-extension'},
                         ]

@@ -65,3 +65,55 @@ const store = new MyStore();
 
 
 ```
+
+## Watching for changes
+
+You can use regular vue watchers on your state, it will work just fine!
+
+For example:
+
+```typescript
+const unsubscribe = watch(store.$count, (value) => console.log('count updated!', value));
+unsubscribe();
+```
+
+However, there's also a little helper function for this, directly on your store
+
+The function call is identical to vue's `watch()` function.
+
+```typescript
+const unsubscribe = store.$watch.count(value => console.log('count updated!', value));
+unsubscribe();
+```
+
+```typescript
+class MyStore extends Store<MyStore, { count: number }>() {
+    get state() {
+        return {count: 0};
+    }
+
+    increment() {
+        this.state.count++;
+    }
+
+    double() {
+        this.$count *= 2;
+    }
+
+    triple() {
+        this.$patch({count: this.$count * 3});
+    }
+
+    quadruple() {
+        this.$patch((state) => {
+            // This is useful when we need to add items to an array for ex
+            // state.items.push(...);
+            state.count *= 4;
+        });
+    }
+}
+
+const store = new MyStore();
+
+
+```

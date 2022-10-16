@@ -39,6 +39,20 @@ app.use(StoreManager, import.meta.glob('./Stores/Generated/StoreLoader.ts', {eag
 app.mount('#app');
 ```
 
+For typescript to see your extensions, you do need to create a declaration.
+Let's create `store_extends.d.ts` in our project src dir
+
+```typescript
+declare module '@idevelopthings/vue-class-stores/vue' {
+    export interface StoreCustomProperties {
+        apiBaseUrl: string;
+        appVersion: string;
+
+        getSomething(): string;
+    }
+}
+```
+
 Now in our store:
 
 ```typescript
