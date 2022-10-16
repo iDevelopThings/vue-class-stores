@@ -144,3 +144,4 @@ import {applicationStore} from "../Stores/TestingApplicationStore";
 applicationStore.loadSomeData();
 </script>
 ```
+![img.png](repository/editor-completion.png)
