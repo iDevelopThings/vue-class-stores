@@ -1,5 +1,6 @@
 {
   "name": "@idevelopthings/vue-class-stores",
+  "version": "1.0.0-beta.12",
   "type": "module",
   "description": "Powerful class based stores for vue 3",
   "keywords": [
@@ -23,9 +24,17 @@
     "type": "git",
     "url": "https://github.com/idevelopthings/vue-class-stores"
   },
-  "version": "1.0.0",
+  "scripts": {
+    "dev": "vite",
+    "build": "tsc && vite build",
+    "dist": "node build.js",
+    "preview": "vite preview",
+    "test": "vitest run --no-threads"
+  },
   "license": "MIT",
   "sideEffects": false,
+  "main": "./dist/Lib/index.js",
+  "types": "./dist/Lib/index.d.ts",
   "typesVersions": {
     "*": {
       "vue": [
@@ -35,7 +44,10 @@
         "./dist/DevTools/index.d.ts"
       ],
       "vite": [
-        "./dist/VitePlugin/index.d.ts"
+        "./dist/VitePlugin/VitePlugin/index.d.ts"
+      ],
+      "common": [
+        "./dist/Common/index.d.ts"
       ]
     }
   },
@@ -43,20 +55,22 @@
     "./vue": {
       "import": "./dist/Lib/index.js",
       "require": "./dist/Lib/index.cjs",
-      "node": "./dist/Lib/index.cjs",
-      "types": "./dist/Lib/index.d.ts"
+      "node": "./dist/Lib/index.cjs"
     },
     "./dev-tools": {
       "import": "./dist/DevTools/index.js",
       "require": "./dist/DevTools/index.cjs",
-      "node": "./dist/DevTools/index.cjs",
-      "types": "./dist/DevTools/index.d.ts"
+      "node": "./dist/DevTools/index.cjs"
     },
     "./vite": {
-      "import": "./dist/VitePlugin/index.js",
-      "require": "./dist/VitePlugin/index.cjs",
-      "node": "./dist/VitePlugin/index.cjs",
-      "types": "./dist/VitePlugin/index.d.ts"
+      "import": "./dist/VitePlugin/VitePlugin/index.js",
+      "require": "./dist/VitePlugin/VitePlugin/index.js",
+      "node": "./dist/VitePlugin/VitePlugin/index.js"
+    },
+    "./common": {
+      "import": "./dist/Common/index.js",
+      "require": "./dist/Common/index.cjs",
+      "node": "./dist/Common/index.cjs"
     }
   },
   "files": [
@@ -65,12 +79,6 @@
     "dist/Lib/**/*",
     "dist/VitePlugin/**/*"
   ],
-  "scripts": {
-    "dev": "vite",
-    "build": "tsc && vite build",
-    "preview": "vite preview",
-    "test": "vitest run --no-threads"
-  },
   "dependencies": {
     "vue": "^3.2.40"
   },

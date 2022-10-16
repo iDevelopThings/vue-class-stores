@@ -1,26 +1,23 @@
 {
   "compilerOptions": {
-    "target": "ESNext",
+    "target": "ES2015",
     "useDefineForClassFields": true,
-    "module": "ESNext",
+    "module": "CommonJS",
     "lib": [
       "ESNext",
       "DOM"
     ],
+    "outDir": "./dist/VitePlugin",
     "moduleResolution": "Node",
     "strict": false,
     "sourceMap": true,
     "resolveJsonModule": true,
     "isolatedModules": true,
     "esModuleInterop": true,
-    "noEmit": true,
     "keyofStringsOnly": true,
     "skipLibCheck": true,
     "baseUrl": ".",
     "rootDir": "./src",
-    "types": [
-      "vitest/globals"
-    ],
     "paths": {
       "@idevelopthings/vue-class-stores/vue": [
         "src/Lib/index.ts"
@@ -34,10 +31,8 @@
     }
   },
   "include": [
-    "src/DevTools",
-    "src/Lib",
-    "src/Test",
-    "src/VitePlugin"
+    "src/VitePlugin",
+    "src/Common"
   ],
   "exclude": [
     "node_modules"

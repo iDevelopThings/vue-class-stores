@@ -7,20 +7,17 @@
       "ESNext",
       "DOM"
     ],
+    "outDir": "dist",
     "moduleResolution": "Node",
     "strict": false,
     "sourceMap": true,
     "resolveJsonModule": true,
     "isolatedModules": true,
     "esModuleInterop": true,
-    "noEmit": true,
     "keyofStringsOnly": true,
     "skipLibCheck": true,
     "baseUrl": ".",
     "rootDir": "./src",
-    "types": [
-      "vitest/globals"
-    ],
     "paths": {
       "@idevelopthings/vue-class-stores/vue": [
         "src/Lib/index.ts"
@@ -36,7 +33,6 @@
   "include": [
     "src/DevTools",
     "src/Lib",
-    "src/Test",
     "src/VitePlugin"
   ],
   "exclude": [
