@@ -3,3 +3,4 @@
 /.idea/
 /dist/
 /docs/node_modules/
+/docs/docs/.vitepress/dist/

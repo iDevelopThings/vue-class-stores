@@ -5,7 +5,7 @@ hero:
     name: Vue Class Stores
     tagline: Powerful & elegant class based stores for vue 3
     image:
-        src: /assets/VueClassStoresLogo.png
+        src: /VueClassStoresLogo.png
         alt: VueClassStores
     actions:
     - theme: brand
