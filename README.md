@@ -20,14 +20,14 @@ import {ClassStoresPlugin} from "@idevelopthings/vue-class-stores/vite";
 export default defineConfig({
 	plugins : [
 		ClassStoresPlugin({
-// The src path where your stores will be located
+			// The src path where your stores will be located
 			storesPath : 'src/Stores',
-// The name of the generated typescript declaration file
-// stores.d.ts is the default
+			// The name of the generated typescript declaration file
+			// stores.d.ts is the default
 			storesFileName : 'stores.d.ts',
 		}),
 		vue(),
-	]
+    ]
 });
 ```
 
