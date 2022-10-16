@@ -53,7 +53,7 @@ import App from './App.vue';
 
 const app = createApp(App);
 // Unfortunately, at the moment, you need to provide this glob import
-app.use(StoreManager, import.meta.glob('./Stores/*', {eager : true}));
+app.use(StoreManager, import.meta.glob('./Stores/Generated/StoreLoader.ts', {eager : true}));
 app.mount('#app');
 ```
 
