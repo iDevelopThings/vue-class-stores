@@ -1,119 +1,112 @@
 import {App} from "@vue/runtime-core";
-import {formatVueBindingName} from "../Common/Formatting";
 import {DevTools} from "./../DevTools";
-import {BaseStore, InternalStoreKeys} from "./Store";
+import type {StoreLoaderModule, StoreMeta, StoreType} from "./Types";
 
-type StoreType = { [K in keyof typeof BaseStore]: typeof BaseStore[K] } &
-                 { vueBinding: string } &
-                 BaseStore<any, any>;
-
-type StoreMeta = {
-	absFilePath: string;
-	relStoreFilePath: string;
-	name: string;
-	className: string;
-	exportName: string;
-	vueBinding: string;
-	actions: {
-		name: string;
-		params: { name: string, defaultValue: string, type: string }[];
-	}[];
-}
 
 export class StoreManagerInstance {
+	private app: App;
+
 	private didInstantiateStores: boolean = false;
 
-	public stores: { [key: string]: StoreType }     = {};
-	private storeModules: { [key: string]: any }    = {};
-	private storeMeta: { [key: string]: StoreMeta } = {};
+	/**
+	 * Holds store Class Name -> Store Instance
+	 * @type {{[p: string]: StoreType}}
+	 */
+	public stores: { [key: string]: StoreType }               = {};
+	/**
+	 * Holds store Class Name -> Store Module
+	 * @type {{[p: string]: any}}
+	 */
+	public storeModules: { [key: string]: any }               = {};
+	/**
+	 * Holds store Class Name -> Store Meta
+	 * @type {{[p: string]: StoreMeta}}
+	 */
+	public storeMeta: { [key: string]: StoreMeta }            = {};
+	/**
+	 * Holds a reference of Binding -> Class Name for quick lookup
+	 * @type {{[p: string]: string}}
+	 */
+	public storeBindingToClassName: { [key: string]: string } = {};
 
 	private extensions: any[] = [];
+
+	install(app: App, storeLoaderGlob: { [key: string]: StoreLoaderModule }) {
+		if (!storeLoaderGlob) {
+			throw new Error('Store loader is not defined');
+		}
+		this.app = app;
+
+		const storeLoader = Object.values(storeLoaderGlob)[0];
+		if (!storeLoader) {
+			throw new Error('Store loader is not defined');
+		}
+
+		this.loadStoresFromLoader(storeLoader);
+
+		if (import.meta.env.DEV) {
+			DevTools.setup(app);
+		}
+
+		this.didInstantiateStores = true;
+	}
+
+	public handleHotReload(modules: any[]): void {
+
+	}
+
+	private loadStoresFromLoader(storeLoader: StoreLoaderModule): void {
+		for (let store of storeLoader.stores) {
+			this.loadStore(store);
+		}
+	}
+
+	private loadStore(meta: StoreMeta) {
+		const storeModuleGlob = meta.module();
+		if (!storeModuleGlob) {
+			throw new Error('Store lazy import; module is not defined for file: ' + meta.importPath);
+		}
+		const storeModule = Object.values(storeModuleGlob)[0];
+		if (!storeModule) {
+			throw new Error('Store module is not defined for file: ' + meta.importPath);
+		}
+
+		const store      = storeModule[meta.exportName] as StoreType;
+		store.vueBinding = meta.vueBinding;
+
+		this.storeModules[meta.className]             = storeModule;
+		this.storeMeta[meta.className]                = meta;
+		this.stores[meta.className]                   = store;
+		this.storeBindingToClassName[meta.vueBinding] = meta.className;
+
+		this.app.config.globalProperties[meta.vueBinding] = store;
+
+		store.__addExtensions(this.extensions.map(extensionFunc => extensionFunc()));
+
+		console.log('Registered store: ', store);
+	}
+
+	private addExtensions() {
+		Object.entries(this.stores).forEach(([key, store]) => {
+			store.__addExtensions(this.extensions.map(extensionFunc => extensionFunc()));
+		});
+	}
 
 	public extend(extensionFunc: () => { [key: string]: any }) {
 		this.extensions.push(extensionFunc);
 
 		if (this.didInstantiateStores) {
-			Object.entries(this.stores).forEach(([key, store]) => {
-				store.addExtension(extensionFunc());
-			});
+			this.addExtensions();
 		}
-	}
-
-	public registerStore(store: StoreType) {
-		store.vueBinding = formatVueBindingName(
-			(store?.constructor as any)?.vueBinding,
-			store.constructor.name
-		);
-
-		this.stores[store.vueBinding] = store;
-	}
-
-	install(app: App, options: { [key: string]: any }) {
-		for (let [key, store] of Object.entries(this.stores)) {
-			store.addExtensions(this.extensions.map(extensionFunc => extensionFunc()));
-
-			app.config.globalProperties[key] = store;
-
-			console.log('Registered store: ' + key);
-		}
-
-		for (let [key, value] of Object.entries(options)) {
-			if (key.endsWith('StoreMeta.json')) {
-				this.storeMeta = value.default.reduce((acc, meta: StoreMeta) => {
-					acc[meta.className] = meta;
-					return acc;
-				}, {});
-			} else {
-				this.storeModules[key] = value;
-			}
-		}
-
-		DevTools.setup(app);
-
-		this.didInstantiateStores = true;
-	}
-
-
-	public manager(key: string) {
-		const store = this.stores[key];
-		return {
-			store    : {
-				getAllState() {
-					return (store as any).__state;
-				},
-				getAllGetters() {
-					return Object.entries(store.__descriptors.getters);
-				},
-				getAllActions : () => {
-					//					if (this.storeMeta[store.constructor.name]) {
-					return this.storeMeta[store.constructor.name].actions.map(action => {
-						return [action.name, {
-							...action,
-							value : store[action.name],
-						}];
-					});
-					//					}
-					//					return Object.entries(store.__descriptors)
-					//						.filter(([key, descriptor]) => !descriptor.get
-					//							&& !descriptor.set
-					//							&& typeof descriptor.value === 'function'
-					//							&& !InternalStoreKeys.includes(key)
-					//						);
-				},
-				getName() {
-					return store.constructor.name;// _.startCase(_.toLower(store.constructor.name));
-				},
-				getVueBinding() {
-					return store.vueBinding;
-				},
-				setState(path: any, value: any): void {
-					console.log('Set state: ' + path + ' = ' + value);
-					(store as any).__setState(path, value);
-				}
-			},
-			instance : store,
-		};
 	}
 }
 
-export default new StoreManagerInstance();
+const storeManager = new StoreManagerInstance();
+
+export default storeManager;
+
+/*if (import.meta.hot) {
+ import.meta.hot.accept('StoreManager.ts', (modules) => {
+ console.log('Store manager updated: ', modules);
+ });
+ }*/

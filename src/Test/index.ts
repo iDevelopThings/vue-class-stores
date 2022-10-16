@@ -9,6 +9,5 @@ StoreManager.extend(() => ({
 	someGlobalFunc : () => 'hello!',
 	someGlobalVar  : 'hello two!',
 }));
-
-app.use(StoreManager, import.meta.glob('./Stores/*', {eager : true}));
+app.use(StoreManager, import.meta.glob('./Stores/Generated/StoreLoader.ts', {eager : true}));
 app.mount('#app');

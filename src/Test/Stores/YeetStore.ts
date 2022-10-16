@@ -56,11 +56,25 @@ export class NewYeetStore extends Store<NewYeetStore, INewYeetStore>() {
 	}
 
 	doThing() {
+		console.log('ffffffdsadaffffff');
 		return this.someGlobalFunc();
 	}
+
+	doSomething() {}
 
 }
 
 
 export const yeetStore = new NewYeetStore();
+
+/*
+if (import.meta.hot) {
+	import.meta.hot.accept(mod => {
+		console.log('module updated', mod);
+	});
+	import.meta.hot.on('vite:beforeFullReload', (...args) => {
+		console.log('before full reload', args);
+	});
+}
+*/
 

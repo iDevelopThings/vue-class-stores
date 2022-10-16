@@ -5,6 +5,7 @@ import {CustomState, StateBase} from "@vue/devtools-api/lib/esm/api/component";
 import {HookPayloads, Hooks} from "@vue/devtools-api/lib/esm/api/hooks";
 import {throttle} from "lodash";
 import {BaseStore} from "../Lib";
+import {StoreApi} from "../Lib/StoreApi";
 import StoreManager from "../Lib/StoreManager";
 import type {PluginOptions} from "./Types";
 
@@ -42,11 +43,9 @@ export class DevtoolsInstance {
 							return;
 						}
 
-						const {store, instance} = StoreManager.manager(this.selectedInspectorNode.nodeId);
-
-						instance.$reset();
-
-						console.log('Reset store', store, instance);
+						StoreApi.forBinding(this.selectedInspectorNode.nodeId)
+							.getInstance()
+							.$reset();
 					}
 				}
 			]
@@ -73,7 +72,7 @@ export class DevtoolsInstance {
 		payload.rootNodes = [];
 
 		for (let storeKey in StoreManager.stores) {
-			const {store, instance} = StoreManager.manager(storeKey);
+			const store = StoreApi.forClass(storeKey);
 
 			const node: CustomInspectorNode = {
 				id    : store.getVueBinding(),
@@ -104,7 +103,8 @@ export class DevtoolsInstance {
 			return;
 		}
 
-		const {store, instance} = StoreManager.manager(payload.nodeId);
+
+		const {store, instance} = StoreApi.forBindingDevTools(payload.nodeId);
 
 		this.selectedInspectorNode = {
 			nodeId       : payload.nodeId,
@@ -133,7 +133,7 @@ export class DevtoolsInstance {
 			return;
 		}
 
-		const {store, instance} = StoreManager.manager(payload.nodeId);
+		const {store, instance} = StoreApi.forBindingDevTools(payload.nodeId);
 
 		payload.set(store.getAllState(), payload.path, payload.state?.value);
 	}
@@ -247,7 +247,7 @@ export class DevtoolsInstance {
 				continue;
 			}
 
-			const {store, instance}        = StoreManager.manager((stateElement.value as any).vueBinding);
+			const {store, instance}        = StoreApi.forBindingDevTools((stateElement.value as any).vueBinding);
 			//			stateElement.type              = 'STORE_STATE';
 			(stateElement as any).storeRef = instance;
 			stateElement.editable          = true;
@@ -275,6 +275,8 @@ export class DevtoolsInstance {
 
 
 	public updateStore(baseStore: any) {
+		if (!this.api) return;
+
 		throttle(() => this.api.sendInspectorState(inspectorId), 100)();
 	}
 }

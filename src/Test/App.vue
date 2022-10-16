@@ -110,15 +110,15 @@
 		<div class="grid grid-cols-4 gap-6">
 			<div class="overflow-hidden">
 				<p>Global Func</p>
-				<p class="text-truncate">{{ $newYeet.$inputValue }}</p>
-				<p class="text-truncate">{{ $newYeet.someGlobalFunc() }}</p>
-				<p class="text-truncate">{{ yeetStore.someGlobalFunc() }}</p>
-				<p class="text-truncate">{{ yeetStore.doThing() }}</p>
+<!--				<p class="text-truncate">{{ $newYeet.$inputValue }}</p>-->
+<!--				<p class="text-truncate">{{ $newYeet.someGlobalFunc() }}</p>-->
+<!--				<p class="text-truncate">{{ yeetStore.someGlobalFunc() }}</p>-->
+<!--				<p class="text-truncate">{{ yeetStore.doThing() }}</p>-->
 			</div>
 			<div class="overflow-hidden">
 				<p>someGlobalVar</p>
-				<p class="text-truncate">{{ $newYeet.someGlobalVar }}</p>
-				<p class="text-truncate">{{ yeetStore.someGlobalVar }}</p>
+<!--				<p class="text-truncate">{{ $newYeet.someGlobalVar }}</p>-->
+<!--				<p class="text-truncate">{{ yeetStore.someGlobalVar }}</p>-->
 			</div>
 		</div>
 
@@ -126,14 +126,11 @@
 </template>
 
 <script setup lang="ts">
-import {yeetStore} from './Stores/YeetStore';
-
-console.log(yeetStore);
-
-yeetStore.someGlobalFunc();
+//import {yeetStore} from './Stores/YeetStore';
+/*yeetStore.someGlobalFunc();*/
 
 
-yeetStore.$onAction(({store, args, name, before, error, after}) => {
+/*yeetStore.$onAction(({store, args, name, before, error, after}) => {
 
 	before(payload => {
 		console.log(`[${name}]: before`, payload);
@@ -148,7 +145,7 @@ yeetStore.$onAction(({store, args, name, before, error, after}) => {
 		console.log(`[${name}]: after`, result);
 	});
 
-});
+});*/
 
 </script>
 

@@ -1,11 +1,9 @@
 import {klona} from "klona";
 import * as _ from "lodash";
 import {getCurrentScope, onScopeDispose, watch, WatchOptions} from "vue";
-import {mergeReactiveObjects} from "../Common/Object";
-import {Subscription, SubscriptionCallbackInfo} from "../Common/Subscription";
+import {mergeReactiveObjects, Subscription} from "../Common";
 import DevTools from "../DevTools/DevTools";
 import type {Path, PathValue} from "./DotPath";
-import StoreManager from "./StoreManager";
 import {BaseStoreImpl, PatchOperationFunction, PatchOperationObject, StoreAction, StoreActionWithSubscriptions, StoreCustomProperties} from "./StoreTypes";
 import type {BaseStoreClass, CustomWatchOptions, WatchFunction, WatchHandler} from "./StoreTypes";
 import {ClassStoreSymbol, DescriptorGroups, getDescriptors, getDescriptorsGrouped, makeReactive} from "./StoreUtils";
@@ -67,7 +65,7 @@ export class BaseStore<TStore, TState> implements BaseStoreImpl<TStore, TState> 
 
 		this.#defineActions();
 
-		StoreManager.registerStore(this as any);
+		//		StoreManager.registerStore(this as any);
 	}
 
 	/**
@@ -298,57 +296,15 @@ export class BaseStore<TStore, TState> implements BaseStoreImpl<TStore, TState> 
 
 	$onAction<K extends keyof TStore>(actionHandler?: (context: StoreAction<TStore, TState>) => void): () => void {
 		return this.__handlers.subscribe(actionHandler);
-
-		/*const action: StoreActionWithSubscriptions<TStore, TState> = actionHandler;
-
-		 action.subscriptions = {
-		 before : undefined,
-		 after  : undefined,
-		 error  : undefined,
-		 };
-
-		 if (action.before) {
-		 action.subscriptions.before = this.__actionSubscriptions.before.addSubscription((args) => {
-		 console.log('[ACTION HANDLER] > triggered: before', args);
-		 action.before(args);
-		 });
-		 }
-		 if (action.after) {
-		 action.subscriptions.after = this.__actionSubscriptions.after.addSubscription((args) => {
-		 console.log('[ACTION HANDLER] > triggered: after', args);
-		 action.after(args);
-		 });
-		 }
-		 if (action.error) {
-		 action.subscriptions.error = this.__actionSubscriptions.error.addSubscription((args) => {
-		 console.log('[ACTION HANDLER] > triggered: error', args);
-		 action.error(args);
-		 });
-		 }
-
-		 this.__actionHandlers.push(action);
-
-		 return () => {
-		 for (let callbackType in action.subscriptions) {
-		 action.subscriptions[callbackType].disposer();
-		 }
-
-		 const idx = this.__actionHandlers.indexOf(action);
-		 if (idx > -1) {
-		 this.__actionHandlers.splice(idx, 1);
-		 }
-		 };*/
-
-		return () => {};
 	}
 
-	public addExtensions(extensions: { [key: string]: any }[]) {
+	public __addExtensions(extensions: { [key: string]: any }[]) {
 		for (let extension of extensions) {
-			this.addExtension(extension);
+			this.__addExtension(extension);
 		}
 	}
 
-	public addExtension(extension: { [key: string]: any }) {
+	public __addExtension(extension: { [key: string]: any }) {
 		const descriptors = getDescriptorsGrouped(extension, InternalStoreKeys);
 
 		const state = {...descriptors.getters, ...descriptors.other};

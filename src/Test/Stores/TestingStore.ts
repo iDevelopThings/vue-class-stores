@@ -54,4 +54,3 @@ export class MyTestStore extends Store<MyTestStore, IMyTestStore>() {
 
 
 export const myTestStore = new MyTestStore();
-
