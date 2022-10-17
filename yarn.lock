@@ -17,10 +17,10 @@
   resolved "https://registry.yarnpkg.com/@esbuild/linux-loong64/-/linux-loong64-0.15.11.tgz#2f4f9a1083dcb4fc65233b6f59003c406abf32e5"
   integrity sha512-geWp637tUhNmhL3Xgy4Bj703yXB9dqiLJe05lCUfjSFDrQf9C/8pArusyPUbUbPwlC/EAUjBw32sxuIl/11dZw==
 
-"@idevelopthings/reflect-extensions@^0.0.2":
-  version "0.0.2"
-  resolved "https://registry.yarnpkg.com/@idevelopthings/reflect-extensions/-/reflect-extensions-0.0.2.tgz#785b8cfbf9461eee3835a5074af2c064719a0688"
-  integrity sha512-FRxye0eH56TI0tiPB/o/6tLSMtnvlgu8yHfOiTCjNt61BiaAS3VL53nMSpMCdqREygFwUJIJqlHWoVTPfD3PVA==
+"@idevelopthings/reflect-extensions@^0.0.3":
+  version "0.0.3"
+  resolved "https://registry.yarnpkg.com/@idevelopthings/reflect-extensions/-/reflect-extensions-0.0.3.tgz#adcff42d937d1d6a61f4ae46c303bca8ac5375bf"
+  integrity sha512-lPM03Va+uFJPEVB7cw64VbXszvDaK+phli+1vBfmK39dYLFXlI6W+BpCB+tFItpoqNlGsf6fh01oPLvHS2iTfg==
   dependencies:
     reflect-args "^2.0.0"
 
@@ -1496,11 +1496,6 @@ vite-plugin-inspect@^0.7.5:
     kolorist "^1.6.0"
     sirv "^2.0.2"
     ufo "^0.8.5"
-
-vite-plugin-utils@^0.3.3:
-  version "0.3.3"
-  resolved "https://registry.yarnpkg.com/vite-plugin-utils/-/vite-plugin-utils-0.3.3.tgz#d36a1937536b5cdc3a3593185c3ce93c40b32569"
-  integrity sha512-qY4UmgO8/osZrCiLLPIyBNDdfZghGd6GAq3O/PhcbmKEavmnzW6axWZmQu4Zy5V4kEAKsfjKD4iaDPCZIgG1fw==
 
 vite@^3.0.0, vite@^3.1.4:
   version "3.1.8"
