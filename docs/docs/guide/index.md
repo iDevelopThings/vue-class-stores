@@ -52,8 +52,7 @@ import {StoreManager} from "@idevelopthings/vue-class-stores/vue";
 import App from './App.vue';
 
 const app = createApp(App);
-// Unfortunately, at the moment, you need to provide this glob import
-app.use(StoreManager, import.meta.glob('./Stores/Generated/StoreLoader.ts', {eager : true}));
+app.use(StoreManager.boot());
 app.mount('#app');
 ```
 
