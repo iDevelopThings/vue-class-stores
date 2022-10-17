@@ -3,7 +3,7 @@ import type {App, DevtoolsPluginApi} from "@vue/devtools-api/lib/esm/api";
 import {CustomInspectorNode} from "@vue/devtools-api/lib/esm/api/api";
 import {CustomState, StateBase} from "@vue/devtools-api/lib/esm/api/component";
 import {HookPayloads, Hooks} from "@vue/devtools-api/lib/esm/api/hooks";
-import {throttle} from "lodash";
+import throttle from "lodash.throttle";
 import {BaseStore} from "../Lib";
 import {StoreApi} from "../Lib/StoreApi";
 import StoreManager from "../Lib/StoreManager";

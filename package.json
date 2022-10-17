@@ -1,6 +1,6 @@
 {
   "name": "@idevelopthings/vue-class-stores",
-  "version": "1.0.5",
+  "version": "1.0.6",
   "type": "module",
   "description": "Powerful class based stores for vue 3",
   "keywords": [
@@ -87,6 +87,7 @@
     "klona": "^2.0.5",
     "lodash.get": "^4.4.2",
     "lodash.set": "^4.3.2",
+    "lodash.throttle": "^4.1.1",
     "lodash.uniq": "^4.5.0",
     "vue": "^3.2.40"
   },
@@ -94,6 +95,7 @@
     "@rollup/pluginutils": "^5.0.1",
     "@types/lodash.get": "^4.4.7",
     "@types/lodash.set": "^4.3.7",
+    "@types/lodash.throttle": "^4.1.7",
     "@types/lodash.uniq": "^4.5.7",
     "@vitejs/plugin-vue": "^3.1.0",
     "@vue/test-utils": "^2.1.0",

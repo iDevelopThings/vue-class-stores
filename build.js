@@ -28,25 +28,17 @@ const commonConfig = {
 		rollupOptions : {
 			external : [
 				'vue',
-				'lodash',
 				'klona',
-				'#ansi-styles',
-				"#supports-color",
 				"typescript",
 				"fs-jetpack",
-				'chalk',
 				'path',
 			],
 			output   : {
 				globals : {
 					vue               : 'Vue',
-					lodash            : '_',
 					klona             : 'klona',
-					'#ansi-styles'    : 'ansi-styles',
-					'#supports-color' : "supports-color",
 					'typescript'      : "ts",
 					'fs-jetpack'      : "jetpack",
-					'chalk'           : 'chalk',
 					'path'            : 'path',
 				},
 			},
