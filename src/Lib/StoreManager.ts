@@ -1,5 +1,6 @@
 import {App} from "@vue/runtime-core";
 import {DevTools} from "./../DevTools";
+import {Logger} from "./Logger";
 import type {StoreLoaderModule, StoreMeta, StoreType} from "./Types";
 
 
@@ -83,7 +84,7 @@ export class StoreManagerInstance {
 
 		store.__addExtensions(this.extensions.map(extensionFunc => extensionFunc()));
 
-		console.log('Registered store: ', store);
+		Logger.label('StoreManager').success('Registered store: ', store);
 	}
 
 	private addExtensions() {
@@ -105,8 +106,3 @@ const storeManager = new StoreManagerInstance();
 
 export default storeManager;
 
-/*if (import.meta.hot) {
- import.meta.hot.accept('StoreManager.ts', (modules) => {
- console.log('Store manager updated: ', modules);
- });
- }*/
