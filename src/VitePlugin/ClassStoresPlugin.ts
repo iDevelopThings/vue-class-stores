@@ -2,10 +2,10 @@ import * as fs from "fs";
 import jetpack from "fs-jetpack";
 import path from "path";
 import type {Plugin, ViteDevServer} from "vite";
-import {ResolvedConfig} from 'vite';
+import {type ResolvedConfig} from 'vite';
 import {Context} from "./Generator";
 import {infoLog} from "./Logger";
-import {defaultPluginConfig, FullConfig, PluginConfig} from "./Types";
+import {defaultPluginConfig, type FullConfig, type PluginConfig} from "./types";
 
 
 const pluginConfig: Partial<FullConfig> = {

@@ -7,7 +7,7 @@ import {throttle} from "lodash";
 import {BaseStore} from "../Lib";
 import {StoreApi} from "../Lib/StoreApi";
 import StoreManager from "../Lib/StoreManager";
-import type {PluginOptions} from "./Types";
+import type {PluginOptions} from "./types";
 
 const inspectorId = 'vue-class-stores-plugin';
 

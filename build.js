@@ -117,9 +117,10 @@ execSync(`tsc --declaration --project ./tsconfig.vite-plugin.json`);
 execSync(`cp src/VitePlugin/package.json dist/VitePlugin/package.json`);
 
 fs.writeFileSync('./dist/index.d.ts', `\n
-export * from './Common';
-export * from './DevTools';
 export * from './Lib';
-export * from './VitePlugin';
+`,
+);
+fs.writeFileSync('./dist/index.js', `\n
+export * from './Lib';
 `,
 );
