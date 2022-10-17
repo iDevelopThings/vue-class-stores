@@ -1,3 +1,4 @@
+import {reflect} from "@idevelopthings/reflect-extensions";
 import {klona} from "klona";
 import {getCurrentScope, onScopeDispose, watch, WatchOptions} from "vue";
 import {mergeReactiveObjects, Subscription} from "../Common";
@@ -18,6 +19,8 @@ export const InternalStoreKeys = [
 	'$reset',
 	'$onAction',
 	'$getState',
+	'__addExtensions',
+	'__addExtension',
 	'__setState',
 	'__originalState',
 	'__state',
@@ -131,21 +134,35 @@ export class BaseStore<TStore, TState> implements BaseStoreImpl<TStore, TState> 
 	#defineActions() {
 		for (let actionsKey in this.__descriptors.actions) {
 			const actionDescriptor = this.__descriptors.actions[actionsKey];
-
 			this.#defineAction(actionsKey, actionDescriptor);
 		}
 	}
 
+	/**
+	 * When a store is loaded, we'll add "proxies" to the methods, which will allow the
+	 * developer to subscribe/intercept their calls via {@see $onAction}
+	 *
+	 * @param {string} actionsKey
+	 * @param {PropertyDescriptor} actionDescriptor
+	 * @private
+	 */
 	#defineAction(actionsKey: string, actionDescriptor: PropertyDescriptor) {
 		Object.defineProperty(this, actionsKey, {
 			value : (...args) => {
+				const actionBuilder = reflect(actionDescriptor.value)
+					.function()
+					.build()
+					.instance(this);
+
+				if (!this.__handlers.hasSubscriptions()) {
+					return actionBuilder.parameters(args).call();
+				}
+
 				const beforeSubscription = new Subscription();
 				const afterSubscription  = new Subscription();
 				const errorSubscription  = new Subscription();
 
 				args = args || [];
-
-				const action = actionDescriptor.value.bind(this);
 
 				function before(cb: (...args) => any) {
 					beforeSubscription.addSubscription(cb);
@@ -170,12 +187,8 @@ export class BaseStore<TStore, TState> implements BaseStoreImpl<TStore, TState> 
 				this.__handlers.trigger(ctx);
 
 				let funcResult: any;
-
 				try {
-					let newArgs = beforeSubscription.triggerPiped(...args);
-					newArgs     = newArgs === undefined ? [] : Array.isArray(newArgs) ? newArgs : [newArgs];
-
-					funcResult = action.call(this, ...newArgs);
+					funcResult = actionBuilder.parameters(beforeSubscription.triggerPiped(...args)).call();
 				} catch (error) {
 					errorSubscription.trigger(error);
 					throw error;
@@ -295,6 +308,14 @@ export class BaseStore<TStore, TState> implements BaseStoreImpl<TStore, TState> 
 		mergeReactiveObjects((this as any).state, patchOperation);
 	}
 
+	/**
+	 * Subscribe to action calls
+	 *
+	 * @template TStore
+	 * @template TState
+	 * @param {(context: StoreAction<TStore, TState>) => void} actionHandler
+	 * @returns {() => void}
+	 */
 	$onAction<K extends keyof TStore>(actionHandler?: (context: StoreAction<TStore, TState>) => void): () => void {
 		return this.__handlers.subscribe(actionHandler);
 	}

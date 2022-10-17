@@ -17,6 +17,13 @@
   resolved "https://registry.yarnpkg.com/@esbuild/linux-loong64/-/linux-loong64-0.15.11.tgz#2f4f9a1083dcb4fc65233b6f59003c406abf32e5"
   integrity sha512-geWp637tUhNmhL3Xgy4Bj703yXB9dqiLJe05lCUfjSFDrQf9C/8pArusyPUbUbPwlC/EAUjBw32sxuIl/11dZw==
 
+"@idevelopthings/reflect-extensions@^0.0.2":
+  version "0.0.2"
+  resolved "https://registry.yarnpkg.com/@idevelopthings/reflect-extensions/-/reflect-extensions-0.0.2.tgz#785b8cfbf9461eee3835a5074af2c064719a0688"
+  integrity sha512-FRxye0eH56TI0tiPB/o/6tLSMtnvlgu8yHfOiTCjNt61BiaAS3VL53nMSpMCdqREygFwUJIJqlHWoVTPfD3PVA==
+  dependencies:
+    reflect-args "^2.0.0"
+
 "@microsoft/api-extractor-model@7.25.1":
   version "7.25.1"
   resolved "https://registry.yarnpkg.com/@microsoft/api-extractor-model/-/api-extractor-model-7.25.1.tgz#be065a816cc83a5aa1b1203a3ac653dd68d62a0d"
@@ -1199,6 +1206,11 @@ readdirp@~3.6.0:
   integrity sha512-hOS089on8RduqdbhvQ5Z37A0ESjsqz6qnRcffsMU3495FuTdqSm+7bhJ29JvIOsBDEEnan5DPu9t3To9VRlMzA==
   dependencies:
     picomatch "^2.2.1"
+
+reflect-args@^2.0.0:
+  version "2.0.0"
+  resolved "https://registry.yarnpkg.com/reflect-args/-/reflect-args-2.0.0.tgz#1e4faefaf313d18207567471c37916372f55acf8"
+  integrity sha512-pMjDo08cQkvYxlsEWbmzS9CVqdXfKHUGKYmo/e5I6QbnXqhdlTJNN6V5fWZmtYmDDMmM/f2EcB//wsgnx+a7gg==
 
 resolve@^1.1.7, resolve@^1.22.1:
   version "1.22.1"

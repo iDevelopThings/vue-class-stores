@@ -53,6 +53,10 @@ export class Subscription {
 	}
 
 	public trigger(...args) {
+		if (!this.hasSubscriptions()) {
+			return;
+		}
+
 		this.callbacks.slice().forEach(({callback}) => {
 			callback(...args);
 		});
@@ -60,10 +64,18 @@ export class Subscription {
 
 	public triggerPiped(...args) {
 		let resultArgs = args;
+		if (!this.hasSubscriptions()) {
+			return resultArgs;
+		}
+
 		this.callbacks.slice().forEach(({callback}) => {
 			resultArgs = callback.call(null, ...resultArgs);
 		});
 
 		return resultArgs;
+	}
+
+	public hasSubscriptions(): boolean {
+		return !!this.callbacks?.length;
 	}
 }

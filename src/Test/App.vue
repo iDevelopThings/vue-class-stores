@@ -35,7 +35,7 @@
 				Test Promise Func
 			</button>
 
-			<button class="rounded shadow bg-gray-200 hover:bg-gray-300 px-4 py-2" @click="$newYeet.errorFunc('hello world')">
+			<button class="rounded shadow bg-gray-200 hover:bg-gray-300 px-4 py-2" @click="$newYeet.errorFunc()">
 				Test Error Func
 			</button>
 
@@ -110,15 +110,15 @@
 		<div class="grid grid-cols-4 gap-6">
 			<div class="overflow-hidden">
 				<p>Global Func</p>
-<!--				<p class="text-truncate">{{ $newYeet.$inputValue }}</p>-->
-<!--				<p class="text-truncate">{{ $newYeet.someGlobalFunc() }}</p>-->
-<!--				<p class="text-truncate">{{ yeetStore.someGlobalFunc() }}</p>-->
-<!--				<p class="text-truncate">{{ yeetStore.doThing() }}</p>-->
+				<!--				<p class="text-truncate">{{ $newYeet.$inputValue }}</p>-->
+				<!--				<p class="text-truncate">{{ $newYeet.someGlobalFunc() }}</p>-->
+				<!--				<p class="text-truncate">{{ yeetStore.someGlobalFunc() }}</p>-->
+				<!--				<p class="text-truncate">{{ yeetStore.doThing() }}</p>-->
 			</div>
 			<div class="overflow-hidden">
 				<p>someGlobalVar</p>
-<!--				<p class="text-truncate">{{ $newYeet.someGlobalVar }}</p>-->
-<!--				<p class="text-truncate">{{ yeetStore.someGlobalVar }}</p>-->
+				<!--				<p class="text-truncate">{{ $newYeet.someGlobalVar }}</p>-->
+				<!--				<p class="text-truncate">{{ yeetStore.someGlobalVar }}</p>-->
 			</div>
 		</div>
 
@@ -126,26 +126,32 @@
 </template>
 
 <script setup lang="ts">
-//import {yeetStore} from './Stores/YeetStore';
+import {yeetStore} from './Stores/YeetStore';
 /*yeetStore.someGlobalFunc();*/
 
 
-/*yeetStore.$onAction(({store, args, name, before, error, after}) => {
+yeetStore.$onAction(({store, args, name, before, error, after}) => {
+	const startTime = Date.now();
+	console.log(`Start "${name}" with args [${args.join(', ')}].`);
 
 	before(payload => {
-		console.log(`[${name}]: before`, payload);
+		console.log(`Before "${name}" args`, payload);
+		// return some new args to use instead
 		return payload;
 	});
 
-	error((error) => {
-		console.log(`[${name}]: error`, error);
-	});
-
 	after((result) => {
-		console.log(`[${name}]: after`, result);
+		console.log(
+			`Finished "${name}" after ${Date.now() - startTime}ms.\nResult: ${result}.`
+		);
 	});
 
-});*/
+	error((error) => {
+		console.warn(
+			`Failed "${name}" after ${Date.now() - startTime}ms.\nError: ${error}.`
+		);
+	});
+});
 
 </script>
 

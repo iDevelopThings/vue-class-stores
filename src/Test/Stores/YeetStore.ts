@@ -45,7 +45,7 @@ export class NewYeetStore extends Store<NewYeetStore, INewYeetStore>() {
 		return this.$inputValue;
 	}
 
-	errorFunc(message: string) {
+	errorFunc() {
 		throw new Error('nop');
 	}
 
