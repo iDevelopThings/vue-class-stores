@@ -101,7 +101,8 @@ export class StoreManagerInstance {
 			throw new Error('Store module is not defined for file: ' + meta.importPath);
 		}
 
-		const store      = storeModule[meta.exportName] as StoreType;
+		const store = storeModule[meta.exportName] as StoreType;
+		store.__bootStore();
 		store.vueBinding = meta.vueBinding;
 
 		this.storeModules[meta.className]             = storeModule;

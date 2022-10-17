@@ -16,3 +16,5 @@ StoreManager.extend(() => ({
 app.use(StoreManager.boot());
 
 app.mount('#app');
+
+(window as any).app = app;

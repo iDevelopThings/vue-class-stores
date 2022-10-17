@@ -3,6 +3,7 @@ import {Store} from "@idevelopthings/vue-class-stores/vue";
 export interface INewYeetStore {
 	counter: number;
 	inputValue: string;
+	banner: { message: string };
 }
 
 
@@ -12,6 +13,7 @@ export class NewYeetStore extends Store<NewYeetStore, INewYeetStore>() {
 		return {
 			counter    : 0,
 			inputValue : "",
+			banner     : {message : ""},
 		};
 	}
 
@@ -37,6 +39,24 @@ export class NewYeetStore extends Store<NewYeetStore, INewYeetStore>() {
 
 	incrementRef() {
 		this.$counter++;
+	}
+
+	setNewMessage(message: string) {
+		this.$banner.message = message;
+	}
+
+	removeBanner() {
+		this.state.banner.message = '';
+	}
+
+	get banner() {
+		const msg = this.state.banner.message;
+
+		if (msg === '') {
+			return undefined;
+		}
+
+		return msg;
 	}
 
 	myTestFunc(message: string) {
@@ -68,13 +88,13 @@ export class NewYeetStore extends Store<NewYeetStore, INewYeetStore>() {
 export const yeetStore = new NewYeetStore();
 
 /*
-if (import.meta.hot) {
-	import.meta.hot.accept(mod => {
-		console.log('module updated', mod);
-	});
-	import.meta.hot.on('vite:beforeFullReload', (...args) => {
-		console.log('before full reload', args);
-	});
-}
-*/
+ if (import.meta.hot) {
+ import.meta.hot.accept(mod => {
+ console.log('module updated', mod);
+ });
+ import.meta.hot.on('vite:beforeFullReload', (...args) => {
+ console.log('before full reload', args);
+ });
+ }
+ */
 

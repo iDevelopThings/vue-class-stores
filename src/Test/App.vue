@@ -1,24 +1,46 @@
 <template>
 	<div class="max-w-3xl mx-auto py-4 flex flex-col space-y-4">
+
+		<div>
+			<p>Object mutations</p>
+
+			<div v-if="$newYeet.banner" class="bg-gray-300 rounded shadow px-4 py-2">
+				{{ $newYeet.banner }}
+			</div>
+
+			<div>
+				<div>
+					<p>Mutations:</p>
+					<div class="flex flex-row items-center">
+						<button @click="$newYeet.setNewMessage('Hello world')">setMessage func</button>
+						<button @click="$newYeet.$banner.message = 'hello world #1'">$banner.message</button>
+						<button @click="$newYeet.state.banner.message = 'hello world #2'">banner.message</button>
+					</div>
+				</div>
+				<div class="flex flex-row items-center">
+					<button @click="$newYeet.removeBanner()">Remove banner</button>
+				</div>
+			</div>
+
+		</div>
+
 		<div class="flex flex-row items-center space-x-6">
-			<button class="rounded shadow bg-gray-200 hover:bg-gray-300 px-4 py-2" @click="$newYeet.incrementRef()">
+			<button @click="$newYeet.incrementRef()">
 				Increment Ref
 			</button>
 
-			<button class="rounded shadow bg-gray-200 hover:bg-gray-300 px-4 py-2" @click="$newYeet.increment()">
+			<button @click="$newYeet.increment()">
 				Increment
 			</button>
-			<button class="rounded shadow bg-gray-200 hover:bg-gray-300 px-4 py-2" @click="yeetStore.increment()">
+			<button @click="yeetStore.increment()">
 				Increment Imported
 			</button>
 			<button
-				class="rounded shadow bg-gray-200 hover:bg-gray-300 px-4 py-2"
 				@click="$newYeet.$patch({counter : $newYeet.$counter + 1, inputValue: 'Testing: '+$newYeet.$counter})"
 			>
 				Increment via $patch object
 			</button>
 			<button
-				class="rounded shadow bg-gray-200 hover:bg-gray-300 px-4 py-2"
 				@click="$newYeet.$patch((state) => {state.counter += 1; state.inputValue = 'Testing: '+state.counter;})"
 			>
 				Increment via $patch fn
@@ -27,15 +49,15 @@
 
 		<div class="flex flex-row items-center space-x-6">
 
-			<button class="rounded shadow bg-gray-200 hover:bg-gray-300 px-4 py-2" @click="$newYeet.myTestFunc('hello world')">
+			<button @click="$newYeet.myTestFunc('hello world')">
 				Test Func
 			</button>
 
-			<button class="rounded shadow bg-gray-200 hover:bg-gray-300 px-4 py-2" @click="$newYeet.promiseFunc('hello world')">
+			<button @click="$newYeet.promiseFunc('hello world')">
 				Test Promise Func
 			</button>
 
-			<button class="rounded shadow bg-gray-200 hover:bg-gray-300 px-4 py-2" @click="$newYeet.errorFunc()">
+			<button @click="$newYeet.errorFunc()">
 				Test Error Func
 			</button>
 
@@ -129,28 +151,28 @@
 import {yeetStore} from './Stores/YeetStore';
 /*yeetStore.someGlobalFunc();*/
 
-yeetStore.$onAction(({store, args, name, before, error, after}) => {
-	const startTime = Date.now();
-	console.log(`Start "${name}" with args [${args.join(', ')}].`);
+/*yeetStore.$onAction(({store, args, name, before, error, after}) => {
+ const startTime = Date.now();
+ console.log(`Start "${name}" with args [${args.join(', ')}].`);
 
-	before(payload => {
-		console.log(`Before "${name}" args`, payload);
-		// return some new args to use instead
-		return payload;
-	});
+ before(payload => {
+ console.log(`Before "${name}" args`, payload);
+ // return some new args to use instead
+ return payload;
+ });
 
-	after((result) => {
-		console.log(
-			`Finished "${name}" after ${Date.now() - startTime}ms.\nResult: ${result}.`
-		);
-	});
+ after((result) => {
+ console.log(
+ `Finished "${name}" after ${Date.now() - startTime}ms.\nResult: ${result}.`
+ );
+ });
 
-	error((error) => {
-		console.warn(
-			`Failed "${name}" after ${Date.now() - startTime}ms.\nError: ${error}.`
-		);
-	});
-});
+ error((error) => {
+ console.warn(
+ `Failed "${name}" after ${Date.now() - startTime}ms.\nError: ${error}.`
+ );
+ });
+ });*/
 
 </script>
 

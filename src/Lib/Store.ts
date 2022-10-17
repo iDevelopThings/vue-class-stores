@@ -1,9 +1,10 @@
 import {reflect} from "@idevelopthings/reflect-extensions";
 import {klona} from "klona";
-import {getCurrentScope, onScopeDispose, watch, WatchOptions} from "vue";
-import {mergeReactiveObjects, Subscription} from "../Common";
+import {computed, EffectScope, effectScope, getCurrentScope, isReactive, isRef, onScopeDispose, reactive, ref, toRaw, toRef, toRefs, unref, watch, WatchOptions} from "vue";
+import {isPlainObject, mergeReactiveObjects, Subscription} from "../Common";
 import DevTools from "../DevTools/DevTools";
 import type {Path, PathValue} from "./DotPath";
+import {Logger} from "./Logger";
 import {BaseStoreImpl, PatchOperationFunction, PatchOperationObject, StoreAction, StoreActionWithSubscriptions, StoreCustomProperties} from "./StoreTypes";
 import type {BaseStoreClass, CustomWatchOptions, WatchFunction, WatchHandler} from "./StoreTypes";
 import {ClassStoreSymbol, DescriptorGroups, getDescriptors, getDescriptorsGrouped, makeReactive} from "./StoreUtils";
@@ -19,6 +20,7 @@ export const InternalStoreKeys = [
 	'$reset',
 	'$onAction',
 	'$getState',
+	'__scope',
 	'__addExtensions',
 	'__addExtension',
 	'__setState',
@@ -28,7 +30,7 @@ export const InternalStoreKeys = [
 	'__descriptors',
 	'__handlers',
 	'__actionHandlers',
-	'__actionSubscriptions',
+	'__bootStore',
 ];
 
 export class BaseStore<TStore, TState> implements BaseStoreImpl<TStore, TState> {
@@ -45,32 +47,50 @@ export class BaseStore<TStore, TState> implements BaseStoreImpl<TStore, TState> 
 
 	public __actionHandlers: StoreActionWithSubscriptions<TStore, TState>[] = [];
 
-	public __actionSubscriptions: {
-		before: Subscription
-		after: Subscription
-		error: Subscription
-	} = {
-		after  : new Subscription(),
-		before : new Subscription(),
-		error  : new Subscription(),
-	};
+	private __scope: EffectScope;
 
 	constructor() {
+
+	}
+
+	__bootStore() {
+		Logger.label('Store').debug('Booting store', this.constructor.name);
 		this.__originalState = klona((this as any).state);
-		this.__state         = klona((this as any).state);
+		this.__state         = reactive(klona((this as any).state));
 
 		Object.defineProperty(this, 'state', {value : {}, configurable : true});
 
-		this.#prepareState(this.__originalState);
+		this.__scope = effectScope(true);
+		this.__scope.run(() => {
+			this.#prepareState(this.__originalState);
 
-		this[ClassStoreSymbol] = this.constructor as unknown as BaseStoreClass<TStore, TState>;
+			this[ClassStoreSymbol] = this.constructor as unknown as BaseStoreClass<TStore, TState>;
 
-		this.__descriptors = getDescriptorsGrouped(this, InternalStoreKeys);
+			this.__descriptors = getDescriptorsGrouped(this, InternalStoreKeys);
 
-		this.#defineActions();
+			this.#defineActions();
 
-		//		StoreManager.registerStore(this as any);
+			const mutationWatcher = watch(() => JSON.parse(JSON.stringify((this as any).__state)), (newVal, oldVal) => {
+				Logger.label('Store').debug('Pre Mutation detected', this.constructor.name, {
+					newVal : newVal.banner?.message,
+					oldVal : oldVal.banner?.message
+				});
+				DevTools.stateMutation(this.constructor.name, newVal, oldVal);
+				DevTools.updateStore(this);
+			}, {deep : false, flush : 'sync'});
+
+			const devtoolsAction = this.$onAction((action) => {
+				DevTools.actionSetup(action);
+			});
+
+			onScopeDispose(() => {
+				Logger.label('Store').debug('Score scope disposed', this.constructor.name);
+				mutationWatcher();
+				devtoolsAction();
+			});
+		});
 	}
+
 
 	/**
 	 * Define all the individual state management for a single property
@@ -79,8 +99,12 @@ export class BaseStore<TStore, TState> implements BaseStoreImpl<TStore, TState> 
 	 */
 	#defineStateProperty(key: string) {
 		const stateSetter = (value) => {
-			this.__state[key].value = value;
-			DevTools.updateStore(this);
+			this.__state[key] = value;
+			//			toRef(this.__state, key).value = value;
+		};
+
+		const stateGetter = () => {
+			return toRef(this.__state, key).value;
 		};
 
 		/**
@@ -88,7 +112,7 @@ export class BaseStore<TStore, TState> implements BaseStoreImpl<TStore, TState> 
 		 * use `__state` as the backing store. Meaning we always have reactive state(because of refs)
 		 */
 		Object.defineProperty((this as any).state, key, {
-			get : () => { return this.__state[key].value; },
+			get : stateGetter,
 			set : stateSetter,
 		});
 
@@ -98,7 +122,7 @@ export class BaseStore<TStore, TState> implements BaseStoreImpl<TStore, TState> 
 		 * It will also allow us to use `$storeName.$myProp` in templates
 		 */
 		Object.defineProperty((this as any), "$" + key, {
-			get : () => { return this.__state[key].value; },
+			get : stateGetter,
 			set : stateSetter,
 		});
 

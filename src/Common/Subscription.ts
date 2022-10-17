@@ -69,7 +69,7 @@ export class Subscription {
 		}
 
 		this.callbacks.slice().forEach(({callback}) => {
-			resultArgs = callback.call(null, ...resultArgs);
+			resultArgs = callback.call(null, resultArgs);
 		});
 
 		return resultArgs;

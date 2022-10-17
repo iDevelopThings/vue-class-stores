@@ -21,3 +21,12 @@ export type StoreMeta = {
 export type StoreLoaderModule = {
 	stores: StoreMeta[];
 }
+
+export enum MutationType {
+	// This would be using store.state.val = 'x', or store.$val = 'x'
+	Direct        = 'direct',
+	// This would be using store.$patch({val: 'x'})
+	PatchObject   = 'patch object',
+	// This would be using store.$patch(state => {state.val = 'x'})
+	PatchFunction = 'patch function',
+}
