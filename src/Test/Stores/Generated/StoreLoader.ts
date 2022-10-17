@@ -31,6 +31,13 @@ export const stores = [{
             }],
         module: () => import.meta.glob("../TestingStore.ts", { eager: true })
     }, {
+        className: "UserStore",
+        importPath: "../UserStore.ts",
+        exportName: "userStore",
+        vueBinding: "$user",
+        actions: [],
+        module: () => import.meta.glob("../UserStore.ts", { eager: true })
+    }, {
         className: "NewYeetStore",
         importPath: "../YeetStore.ts",
         exportName: "yeetStore",
@@ -69,7 +76,7 @@ export const stores = [{
         module: () => import.meta.glob("../YeetStore.ts", { eager: true })
     }];
 if (import.meta.hot) {
-    import.meta.hot.accept(["./../TestingStore", "./../YeetStore"], modules => {
+    import.meta.hot.accept(["./../TestingStore", "./../UserStore", "./../YeetStore"], modules => {
         console.log("stores updated", modules);
         StoreManager.handleHotReload(modules);
     });

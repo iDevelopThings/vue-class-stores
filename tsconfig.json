@@ -22,6 +22,9 @@
       "vitest/globals"
     ],
     "paths": {
+      "@idevelopthings/vue-class-stores": [
+        "src/Lib/index.ts"
+      ],
       "@idevelopthings/vue-class-stores/vue": [
         "src/Lib/index.ts"
       ],

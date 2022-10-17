@@ -1,7 +1,6 @@
 import chalk from "chalk";
 import jetpack from "fs-jetpack";
 import {FSJetpack} from "fs-jetpack/types";
-import _ from "lodash";
 import * as path from "path";
 import ts from "typescript";
 import crypto from 'crypto';
@@ -11,6 +10,7 @@ import {unwrappableNode} from "./Builders/Object";
 import {createStoreLoaderModule} from "./Builders/StoreLoader";
 import {basicLog, errorLog, infoLog, successLog, warnLog} from "./Logger";
 import {FullConfig} from "./types";
+import {uniq} from 'lodash.uniq';
 
 const {factory} = ts;
 
@@ -123,7 +123,7 @@ export class Context {
 
 		this.storeFilePaths = paths;
 
-		return this.filePaths = _.uniq(paths.concat(...this.parsedCommandLine.fileNames.map(
+		return this.filePaths = uniq(paths.concat(...this.parsedCommandLine.fileNames.map(
 			f => ts.sys.resolvePath(f)
 		)));
 	}

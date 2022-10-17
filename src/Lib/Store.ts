@@ -1,5 +1,4 @@
 import {klona} from "klona";
-import * as _ from "lodash";
 import {getCurrentScope, onScopeDispose, watch, WatchOptions} from "vue";
 import {mergeReactiveObjects, Subscription} from "../Common";
 import DevTools from "../DevTools/DevTools";
@@ -7,6 +6,8 @@ import type {Path, PathValue} from "./DotPath";
 import {BaseStoreImpl, PatchOperationFunction, PatchOperationObject, StoreAction, StoreActionWithSubscriptions, StoreCustomProperties} from "./StoreTypes";
 import type {BaseStoreClass, CustomWatchOptions, WatchFunction, WatchHandler} from "./StoreTypes";
 import {ClassStoreSymbol, DescriptorGroups, getDescriptors, getDescriptorsGrouped, makeReactive} from "./StoreUtils";
+import {get} from 'lodash.get';
+import {set} from 'lodash.set';
 
 export const InternalStoreKeys = [
 	'constructor',
@@ -230,11 +231,11 @@ export class BaseStore<TStore, TState> implements BaseStoreImpl<TStore, TState> 
 	 * @returns {PathValue<TState, P>}
 	 */
 	$getState<P extends Path<TState>>(path: P, defaultValue?: any): PathValue<TState, P> {
-		return _.get(this.__state, path, defaultValue);
+		return get(this.__state, path, defaultValue);
 	}
 
 	private __setState(path: string, value: any) {
-		_.set(this.__state, path, value);
+		set(this.__state, path, value);
 	}
 
 	#createWatcher(stateKey: string, handler: WatchHandler<any>, options?: CustomWatchOptions) {
