@@ -129,7 +129,6 @@
 import {yeetStore} from './Stores/YeetStore';
 /*yeetStore.someGlobalFunc();*/
 
-
 yeetStore.$onAction(({store, args, name, before, error, after}) => {
 	const startTime = Date.now();
 	console.log(`Start "${name}" with args [${args.join(', ')}].`);

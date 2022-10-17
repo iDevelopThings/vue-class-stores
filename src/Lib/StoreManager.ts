@@ -32,16 +32,45 @@ export class StoreManagerInstance {
 
 	private extensions: any[] = [];
 
-	install(app: App, storeLoaderGlob: { [key: string]: StoreLoaderModule }) {
+	/**
+	 * The call to this method is transformed by the vite plugin
+	 * It will automatically add the store loader `import.meta.glob('', {eager:true})` call as a parameter
+	 *
+	 * The end developer just needs to use `app.use(StoreManager.boot())`
+	 *
+	 * @returns {{install: (app: App) => void}}
+	 */
+	public boot() {
+		//		Logger.debug('StoreManager boot called...', arguments);
+		if (!arguments?.length) {
+			Logger.error('StoreManager boot called without arguments... this could be a problem with the vue-class-stores vite plugin, please report this on github! <3');
+			return;
+		}
+
+		const storeLoaderGlob = arguments[0];
 		if (!storeLoaderGlob) {
 			throw new Error('Store loader is not defined');
 		}
-		this.app = app;
 
 		const storeLoader = Object.values(storeLoaderGlob)[0];
 		if (!storeLoader) {
 			throw new Error('Store loader is not defined');
 		}
+
+		//		Logger.debug("Store loader passed via transformer: ", storeLoader);
+
+		return {
+			install : (app: App) => {
+				this.bootFromLoader(app, storeLoader as any);
+			}
+		};
+	}
+
+	private bootFromLoader(app: App, storeLoader: StoreLoaderModule) {
+		if (!storeLoader) {
+			throw new Error('Store loader is not defined');
+		}
+		this.app = app;
 
 		this.loadStoresFromLoader(storeLoader);
 
@@ -100,6 +129,7 @@ export class StoreManagerInstance {
 			this.addExtensions();
 		}
 	}
+
 }
 
 const storeManager = new StoreManagerInstance();

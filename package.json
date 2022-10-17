@@ -90,10 +90,11 @@
     "lodash.set": "^4.3.2",
     "lodash.throttle": "^4.1.1",
     "lodash.uniq": "^4.5.0",
-    "vue": "^3.2.40"
+    "vue": "^3.2.40",
+    "@rollup/pluginutils": "^5.0.1",
+    "vite-plugin-utils": "^0.3.3"
   },
   "devDependencies": {
-    "@rollup/pluginutils": "^5.0.1",
     "@types/lodash.get": "^4.4.7",
     "@types/lodash.set": "^4.3.7",
     "@types/lodash.throttle": "^4.1.7",

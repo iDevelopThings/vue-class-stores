@@ -3,9 +3,13 @@ import jetpack from "fs-jetpack";
 import path from "path";
 import type {Plugin, ViteDevServer} from "vite";
 import {type ResolvedConfig} from 'vite';
+import {MagicString, relativeify, walk} from "vite-plugin-utils/function";
 import {Context} from "./Generator";
 import {infoLog} from "./Logger";
 import {defaultPluginConfig, type FullConfig, type PluginConfig} from "./types";
+import type {AcornNode as AcornNode2} from 'rollup';
+
+export type AcornNode<T = any> = AcornNode2 & Record<string, T>
 
 
 const pluginConfig: Partial<FullConfig> = {
@@ -95,6 +99,49 @@ export function ClassStoresPlugin(configuration?: PluginConfig): Plugin {
 				}
 
 			});
+		},
+
+		async transform(code, id) {
+			if (/node_modules\/(?!\.vite\/)/.test(id)) return;
+			if (!id.endsWith('.ts')) return;
+
+			const ast = this.parse(code);
+			const ms  = new MagicString(code);
+
+			await walk(ast, {
+				CallExpression(node: AcornNode) {
+					if (node.callee?.type !== 'MemberExpression') return;
+
+					/**
+					 * Transform app.use(StoreManager.boot()) to
+					 * app.use(StoreManager.boot(import.meta.glob('./Stores/Generated/StoreLoader.ts', {eager:true})))
+					 */
+
+					const expression = node.callee;
+					if (expression.object?.type !== 'Identifier') return;
+					if (expression.object?.name !== 'StoreManager') return;
+					if (expression.property?.type !== 'Identifier') return;
+					if (expression.property?.name !== 'boot') return;
+					if (!!node?.arguments?.length) return;
+
+					const statementCode    = code.slice(node.start, node.end);
+					const loaderImportPath = relativeify(path.relative(path.dirname(id), pluginConfig.storesDirectory.path(
+						pluginConfig.generatedDirName,
+						pluginConfig.storeLoaderFile
+					)));
+
+					const newStatement = `StoreManager.boot(import.meta.glob('${loaderImportPath}', {eager:true}))`;
+
+					infoLog(`Transformed boot call from "${statementCode}" to "${newStatement}"`);
+
+					ms.overwrite(node.start, node.end, newStatement);
+				}
+			});
+
+			const msResult = ms.toString();
+			if (msResult === code) return;
+
+			return msResult;
 		},
 		buildStart(options: any) {
 			context.writeFiles();

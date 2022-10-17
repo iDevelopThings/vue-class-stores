@@ -30,7 +30,6 @@ export type StoreInfo = {
 	exportName?: string,
 }
 
-const GENERATED_FILE_DIR = 'Generated';
 
 export class Context {
 
@@ -90,7 +89,7 @@ export class Context {
 		}
 		this.parsedCommandLine = ts.parseJsonConfigFileContent(ts.readConfigFile(configPath, ts.sys.readFile).config, ts.sys, "./");
 
-		this.generatedDir = jetpack.dir(this.config.storesDirectory.path(GENERATED_FILE_DIR));
+		this.generatedDir = jetpack.dir(this.config.storesDirectory.path(pluginConfig.generatedDirName));
 
 		this.setFilePaths();
 

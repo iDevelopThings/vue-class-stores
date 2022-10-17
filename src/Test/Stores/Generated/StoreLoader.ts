@@ -56,10 +56,7 @@ export const stores = [{
                     }]
             }, {
                 name: "errorFunc",
-                params: [{
-                        name: "message",
-                        type: "string"
-                    }]
+                params: []
             }, {
                 name: "promiseFunc",
                 params: [{
