@@ -1,9 +1,10 @@
 import {reflect} from "@idevelopthings/reflect-extensions";
 import {klona} from "klona";
-import {getCurrentScope, onScopeDispose, watch, WatchOptions} from "vue";
+import {EffectScope, effectScope, getCurrentScope, onScopeDispose, unref, watch, WatchOptions} from "vue";
 import {mergeReactiveObjects, Subscription} from "../Common";
 import DevTools from "../DevTools/DevTools";
 import type {Path, PathValue} from "./DotPath";
+import {Logger} from "./Logger";
 import {BaseStoreImpl, PatchOperationFunction, PatchOperationObject, StoreAction, StoreActionWithSubscriptions, StoreCustomProperties} from "./StoreTypes";
 import type {BaseStoreClass, CustomWatchOptions, WatchFunction, WatchHandler} from "./StoreTypes";
 import {ClassStoreSymbol, DescriptorGroups, getDescriptors, getDescriptorsGrouped, makeReactive} from "./StoreUtils";
@@ -19,6 +20,7 @@ export const InternalStoreKeys = [
 	'$reset',
 	'$onAction',
 	'$getState',
+	'__scope',
 	'__addExtensions',
 	'__addExtension',
 	'__setState',
@@ -28,7 +30,7 @@ export const InternalStoreKeys = [
 	'__descriptors',
 	'__handlers',
 	'__actionHandlers',
-	'__actionSubscriptions',
+	'__bootStore',
 ];
 
 export class BaseStore<TStore, TState> implements BaseStoreImpl<TStore, TState> {
@@ -45,32 +47,40 @@ export class BaseStore<TStore, TState> implements BaseStoreImpl<TStore, TState> 
 
 	public __actionHandlers: StoreActionWithSubscriptions<TStore, TState>[] = [];
 
-	public __actionSubscriptions: {
-		before: Subscription
-		after: Subscription
-		error: Subscription
-	} = {
-		after  : new Subscription(),
-		before : new Subscription(),
-		error  : new Subscription(),
-	};
+	private __scope: EffectScope;
 
 	constructor() {
+
+	}
+
+	__bootStore() {
+		Logger.label('Store').debug('Booting store', this.constructor.name);
 		this.__originalState = klona((this as any).state);
 		this.__state         = klona((this as any).state);
 
 		Object.defineProperty(this, 'state', {value : {}, configurable : true});
 
-		this.#prepareState(this.__originalState);
+		this.__scope = effectScope(true);
+		this.__scope.run(() => {
+			this.#prepareState(this.__originalState);
 
-		this[ClassStoreSymbol] = this.constructor as unknown as BaseStoreClass<TStore, TState>;
+			this[ClassStoreSymbol] = this.constructor as unknown as BaseStoreClass<TStore, TState>;
 
-		this.__descriptors = getDescriptorsGrouped(this, InternalStoreKeys);
+			this.__descriptors = getDescriptorsGrouped(this, InternalStoreKeys);
 
-		this.#defineActions();
+			this.#defineActions();
 
-		//		StoreManager.registerStore(this as any);
+			const mutationWatcher = watch(() => unref(this.__state), (newVal, oldVal) => {
+				Logger.label('Store').debug('Mutation detected', this.constructor.name, {newVal : newVal.banner, oldVal : oldVal.banner});
+			}, {deep : true, flush : 'sync'});
+
+			onScopeDispose(() => {
+				Logger.label('Store').debug('Score scope disposed', this.constructor.name);
+				mutationWatcher();
+			});
+		});
 	}
+
 
 	/**
 	 * Define all the individual state management for a single property

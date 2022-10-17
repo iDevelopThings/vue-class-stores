@@ -1,3 +1,8 @@
 @tailwind base;
 @tailwind components;
 @tailwind utilities;
+
+
+button {
+	@apply rounded shadow bg-gray-200 hover:bg-gray-300 px-4 py-2;
+}

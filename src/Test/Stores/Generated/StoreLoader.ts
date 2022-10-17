@@ -49,6 +49,15 @@ export const stores = [{
                 name: "incrementRef",
                 params: []
             }, {
+                name: "setNewMessage",
+                params: [{
+                        name: "message",
+                        type: "string"
+                    }]
+            }, {
+                name: "removeBanner",
+                params: []
+            }, {
                 name: "myTestFunc",
                 params: [{
                         name: "message",

@@ -82,7 +82,7 @@
     "dist/index.d.ts"
   ],
   "dependencies": {
-    "@idevelopthings/reflect-extensions": "^0.0.2",
+    "@idevelopthings/reflect-extensions": "^0.0.3",
     "@vue/devtools-api": "^6.4.4",
     "fs-jetpack": "^5.0.0",
     "klona": "^2.0.5",
