@@ -6,8 +6,8 @@ import type {Path, PathValue} from "./DotPath";
 import {BaseStoreImpl, PatchOperationFunction, PatchOperationObject, StoreAction, StoreActionWithSubscriptions, StoreCustomProperties} from "./StoreTypes";
 import type {BaseStoreClass, CustomWatchOptions, WatchFunction, WatchHandler} from "./StoreTypes";
 import {ClassStoreSymbol, DescriptorGroups, getDescriptors, getDescriptorsGrouped, makeReactive} from "./StoreUtils";
-import {get} from 'lodash.get';
-import {set} from 'lodash.set';
+import get from 'lodash.get';
+import set from 'lodash.set';
 
 export const InternalStoreKeys = [
 	'constructor',

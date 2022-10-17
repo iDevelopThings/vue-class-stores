@@ -8,7 +8,7 @@
       "DOM"
     ],
     "moduleResolution": "Node",
-    "strict": false,
+    "strict": true,
     "sourceMap": true,
     "resolveJsonModule": true,
     "isolatedModules": true,

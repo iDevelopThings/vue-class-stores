@@ -1,4 +1,3 @@
-import chalk from "chalk";
 import jetpack from "fs-jetpack";
 import {FSJetpack} from "fs-jetpack/types";
 import * as path from "path";
@@ -8,9 +7,9 @@ import {formatVueBindingName} from "../Common";
 import {createLazyImportGlobNode, createRelativeImportNode} from "./Builders/Imports";
 import {unwrappableNode} from "./Builders/Object";
 import {createStoreLoaderModule} from "./Builders/StoreLoader";
-import {basicLog, errorLog, infoLog, successLog, warnLog} from "./Logger";
+import {basicLog, colors, errorLog, infoLog, successLog, warnLog} from "./Logger";
 import {FullConfig} from "./types";
-import {uniq} from 'lodash.uniq';
+import uniq from 'lodash.uniq';
 
 const {factory} = ts;
 
@@ -210,8 +209,8 @@ export class Context {
 			return;
 		}
 
-		infoLog('Located', chalk.reset(storeCount), 'stores:');
-		basicLog(this.stores.map(s => "   - " + chalk.reset(s.className)).join('\n'));
+		infoLog('Located', colors.ResetWrap(storeCount), 'stores:');
+		basicLog(this.stores.map(s => "   - " + colors.ResetWrap(s.className)).join('\n'));
 
 		const vueDtsFile = createVueDtsFile(this.stores);
 
@@ -219,7 +218,7 @@ export class Context {
 		if (didWrite) {
 			successLog(
 				'Generated stores vue declaration file at:',
-				chalk.reset(this.generatedDir.path(filePath).replace(this.config.projectRoot, ''))
+				colors.ResetWrap(this.generatedDir.path(filePath).replace(this.config.projectRoot, ''))
 			);
 		}
 
@@ -230,7 +229,7 @@ export class Context {
 		if (loaderResult.didWrite) {
 			successLog(
 				'Generated store loader file at:',
-				chalk.reset(this.generatedDir.path(loaderResult.filePath).replace(this.config.projectRoot, ''))
+				colors.ResetWrap(this.generatedDir.path(loaderResult.filePath).replace(this.config.projectRoot, ''))
 			);
 		}
 
