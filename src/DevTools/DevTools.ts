@@ -4,7 +4,8 @@ import {CustomInspectorNode} from "@vue/devtools-api/lib/esm/api/api";
 import {CustomState, StateBase} from "@vue/devtools-api/lib/esm/api/component";
 import {HookPayloads, Hooks} from "@vue/devtools-api/lib/esm/api/hooks";
 import throttle from "lodash.throttle";
-import {BaseStore} from "../Lib";
+import {isRef} from "vue";
+import {BaseStore, StoreAction} from "../Lib";
 import {StoreApi} from "../Lib/StoreApi";
 import StoreManager from "../Lib/StoreManager";
 import type {PluginOptions} from "./types";
@@ -16,16 +17,20 @@ export class DevtoolsInstance {
 
 	private selectedInspectorNode: { nodeId: string, storeBinding: string } = {nodeId : null, storeBinding : null};
 
+	private currentGroupId: number = 0;
+	private currentAction: any     = null;
+
 	public isAvailable() {
 		return (window as any).__VUE_DEVTOOLS_GLOBAL_HOOK__ !== undefined;
 	}
 
 	public setup(app: App) {
 		setupDevtoolsPlugin({
-			id          : inspectorId,
-			label       : 'Vue Class Stores',
-			packageName : 'vue-class-stores',
-			app
+			id               : inspectorId,
+			label            : 'Vue Class Stores',
+			packageName      : 'vue-class-stores',
+			app,
+			enableEarlyProxy : true
 		}, this.configurePlugin.bind(this));
 	}
 
@@ -60,6 +65,13 @@ export class DevtoolsInstance {
 		this.api.on.getInspectorTree(this.onGetInspectorTree.bind(this));
 		this.api.on.getInspectorState(this.onGetInspectorState.bind(this));
 		this.api.on.editInspectorState(this.onEditInspectorState.bind(this));
+
+		api.addTimelineLayer({
+			id    : inspectorId,
+			color : 0xff984f,
+			label : 'Vue Class Stores'
+		});
+
 	}
 
 	/**
@@ -153,7 +165,7 @@ export class DevtoolsInstance {
 			key,
 			editable   : true,
 			objectType : 'ref',
-			value      : data.value
+			value      : isRef(data) ? data.value : data
 		}));
 	}
 
@@ -282,6 +294,82 @@ export class DevtoolsInstance {
 		if (!this.api) return;
 
 		throttle(() => this.api.sendInspectorState(inspectorId), 100)();
+	}
+
+	public stateMutation(name: string, newVal: any, oldVal: any): void {
+		if (!this.api) return;
+
+
+		const eventData = {
+			title    : name,
+			subtitle : 'State Mutation',
+			time     : this.api.now(),
+			data     : {
+				newState : newVal,
+				oldState : oldVal
+			}
+		};
+
+		if (this.currentAction) {
+			eventData.title            = 'Action:' + this.currentAction.name;
+			(eventData as any).groupId = this.currentGroupId;
+		}
+		this.api.addTimelineEvent({
+			layerId : inspectorId,
+			event   : eventData
+		});
+	}
+
+	public actionSetup(action: StoreAction<any, any>): void {
+		this.currentAction = action;
+		const id           = this.currentGroupId++;
+
+		console.log('actionSetup', id);
+
+		action.before((payload) => {
+			this.api.addTimelineEvent({
+				layerId : inspectorId,
+				event   : {
+					title    : 'Action:' + action.name,
+					subtitle : 'Before',
+					groupId  : id,
+					time     : this.api.now(),
+					data     : {
+						args : payload,
+					}
+				}
+			});
+			return payload;
+		});
+
+		action.after((payload) => {
+			this.currentAction = null;
+			this.api.addTimelineEvent({
+				layerId : inspectorId,
+				event   : {
+					title    : 'Action:' + action.name,
+					subtitle : 'Result',
+					groupId  : id,
+					time     : this.api.now(),
+					data     : {result : payload},
+				}
+			});
+		});
+
+		action.error((payload) => {
+			this.currentAction = null;
+
+			this.api.addTimelineEvent({
+				layerId : inspectorId,
+				event   : {
+					title    : 'Action:' + action.name,
+					subtitle : 'Error 😭',
+					groupId  : id,
+					time     : this.api.now(),
+					data     : payload,
+				}
+			});
+		});
 	}
 }
 

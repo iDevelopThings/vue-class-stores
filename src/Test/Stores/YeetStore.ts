@@ -42,7 +42,7 @@ export class NewYeetStore extends Store<NewYeetStore, INewYeetStore>() {
 	}
 
 	setNewMessage(message: string) {
-		this.state.banner.message = message;
+		this.$banner.message = message;
 	}
 
 	removeBanner() {
