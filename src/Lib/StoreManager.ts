@@ -44,7 +44,7 @@ export class StoreManagerInstance {
 
 		this.loadStoresFromLoader(storeLoader);
 
-		if (import.meta.env.DEV) {
+		if (DevTools.isAvailable()) {
 			DevTools.setup(app);
 		}
 

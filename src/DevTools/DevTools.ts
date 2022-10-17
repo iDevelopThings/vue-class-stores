@@ -16,6 +16,10 @@ export class DevtoolsInstance {
 
 	private selectedInspectorNode: { nodeId: string, storeBinding: string } = {nodeId : null, storeBinding : null};
 
+	public isAvailable() {
+		return (window as any).__VUE_DEVTOOLS_GLOBAL_HOOK__ !== undefined;
+	}
+
 	public setup(app: App) {
 		setupDevtoolsPlugin({
 			id          : inspectorId,
