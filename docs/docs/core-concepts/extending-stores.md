@@ -35,7 +35,7 @@ StoreManager.extend(() => {
 });
 
 const app = createApp(App);
-app.use(StoreManager, import.meta.glob('./Stores/Generated/StoreLoader.ts', {eager: true}));
+app.use(StoreManager.boot());
 app.mount('#app');
 ```
 
