@@ -60,6 +60,8 @@ export class StoreMeta {
 	public finalize(): this {
 		this.formatVueBinding();
 
+		debugLog(`Found getters: ${this.getters?.map(g => g.n).join(', ')} in ${this.className}`);
+
 		return this;
 	}
 
@@ -88,8 +90,8 @@ export class StoreMeta {
 		this.stateObj = stateObj;
 
 		for (let property of stateObj.properties) {
-			if (ts.isPropertyAssignment(property)) {
-				this.stateKeys.push(property.name.getText());
+			if (ts.isPropertyAssignment(property) && property?.name) {
+				this.stateKeys.push((property.name as any)?.escapedText);
 			}
 		}
 
@@ -105,8 +107,6 @@ export class StoreMeta {
 			n : member.name.getText(),
 			c : hasDecorator(member, 'Computed'),
 		});
-
-		debugLog(`Found getter ${member.name.getText()} in ${this.className}`);
 	}
 
 }

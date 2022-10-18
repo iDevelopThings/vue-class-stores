@@ -1,5 +1,7 @@
+import path from "path";
 import ts from "typescript";
 import {StoreMeta} from "../Meta/StoreMeta";
+import {PluginConfig} from "../PluginConfig";
 import {createImportNode, formatImportString} from "./Imports";
 import {createConstVariableNode} from "./Nodes";
 
@@ -14,8 +16,8 @@ export function createStoreLoaderModule(stores: StoreMeta[]) {
 	return [
 		...imports,
 		createConstVariableNode("stores", stores.map(store => store.metaObject()), false, true),
-//		createBootStoresFunction(),
-		createViteHotAccept(stores)
+		//		createBootStoresFunction(),
+//		createViteHotAccept(stores)
 	];
 
 }
@@ -66,6 +68,15 @@ function createBootStoresFunction() {
 
 
 function createViteHotAccept(stores: StoreMeta[]) {
+
+	const storeImports = stores.map(
+		store => factory.createStringLiteral(formatImportString(store.loaderImportPath))
+	);
+
+	//	storeImports.push(factory.createStringLiteral(
+	//		formatImportString(path.relative(path.dirname(PluginConfig.storeLoaderPath), PluginConfig.storeLoaderPath))
+	//	))
+
 	return factory.createIfStatement(
 		factory.createPropertyAccessExpression(
 			factory.createMetaProperty(
@@ -88,9 +99,7 @@ function createViteHotAccept(stores: StoreMeta[]) {
 				),
 				undefined,
 				[
-					factory.createArrayLiteralExpression(stores.map(
-						store => factory.createStringLiteral(formatImportString(store.loaderImportPath))
-					), false),
+					factory.createArrayLiteralExpression(storeImports, false),
 					factory.createArrowFunction(
 						undefined,
 						undefined,

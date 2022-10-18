@@ -1,8 +1,8 @@
 import * as fs from "fs";
 import path from "path";
 import type {Plugin, ViteDevServer} from "vite";
+import {formatImportString} from "./Builders/Imports";
 import {PluginConfig, UserPluginConfig} from "./PluginConfig";
-import {Timed} from "./Utils/Timed";
 import {MagicString, relativeify, walk} from "./Utils/ViteFunction";
 import {Context} from "./Generator";
 import {infoLog} from "./Logger";
@@ -10,13 +10,12 @@ import type {AcornNode as AcornNode2} from 'rollup';
 
 export type AcornNode<T = any> = AcornNode2 & Record<string, T>
 
+const context = new Context();
 
 export function ClassStoresPlugin(configuration?: UserPluginConfig): Plugin {
 	PluginConfig.setUserConfig(configuration);
-	const context = new Context();
 
 	let server: ViteDevServer;
-
 
 	return {
 		name : 'class-stores-loader',
@@ -85,6 +84,8 @@ export function ClassStoresPlugin(configuration?: UserPluginConfig): Plugin {
 			const ast = this.parse(code);
 			const ms  = new MagicString(code);
 
+			let transformed = false;
+
 			await walk(ast, {
 				CallExpression(node: AcornNode) {
 					if (node.callee?.type !== 'MemberExpression') return;
@@ -102,10 +103,9 @@ export function ClassStoresPlugin(configuration?: UserPluginConfig): Plugin {
 					if (!!node?.arguments?.length) return;
 
 					const statementCode    = code.slice(node.start, node.end);
-					const loaderImportPath = relativeify(path.relative(path.dirname(id), PluginConfig.storesDirectory.path(
-						PluginConfig.generatedDirName,
-						PluginConfig.storeLoaderFile
-					)));
+					const loaderImportPath = PluginConfig.getRelativeLoaderImportPath(id);
+
+					transformed = true;
 
 					const newStatement = `StoreManager.boot(import.meta.glob('${loaderImportPath}', {eager:true}))`;
 
@@ -115,8 +115,29 @@ export function ClassStoresPlugin(configuration?: UserPluginConfig): Plugin {
 				}
 			});
 
+			if (transformed) {
+				const dir          = path.dirname(id);
+				const storeImports = context.stores.map(
+					store => `'${formatImportString(path.relative(dir, store.absFilePath))}.ts'`
+				);
+
+				const loaderImport = PluginConfig.getRelativeLoaderImportPath(id);
+
+				ms.append(`
+				if(import.meta.hot) {
+					let ___loaderModule = null;
+					import.meta.hot.accept('${loaderImport}', (dep) => {
+						if(dep) {
+							___loaderModule = dep;
+						}
+                        StoreManager.loaderReloaded(___loaderModule?.stores);
+					})
+				}`);
+			}
+
 			const msResult = ms.toString();
 			if (msResult === code) return;
+
 
 			return msResult;
 		},

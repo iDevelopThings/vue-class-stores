@@ -3,6 +3,7 @@ import path from "path";
 import ts from "typescript";
 import {ResolvedConfig} from "vite";
 import {endTimer, startTimer} from "./Utils/Timed";
+import {relativeify} from "./Utils/ViteFunction";
 
 export type UserPluginConfig = {
 	projectRoot?: string;
@@ -160,6 +161,13 @@ class PluginConfigInstance {
 		];
 
 		return paths.includes(file);
+	}
+
+	public getRelativeLoaderImportPath(from:string) {
+		return relativeify(path.relative(path.dirname(from), PluginConfig.storesDirectory.path(
+			PluginConfig.generatedDirName,
+			PluginConfig.storeLoaderFile
+		)));
 	}
 }
 

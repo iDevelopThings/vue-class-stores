@@ -192,6 +192,10 @@ export class Context {
 	}
 
 	rebuild() {
+		PluginConfig.setStoreFilePaths();
+		TS.rebuild();
+		this.reloadModules(false);
+
 		this.process();
 		this.writeFiles();
 	}
@@ -243,7 +247,7 @@ export class Context {
 					store.setStateObject(stateObj);
 				}
 
-				if(ts.isGetAccessor(member) && ts.isIdentifier(member.name)) {
+				if (ts.isGetAccessor(member) && ts.isIdentifier(member.name)) {
 					store.addGetter(member);
 				}
 			}

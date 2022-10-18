@@ -21,6 +21,8 @@ export function endTimer(name: string) {
 	const end      = Date.now();
 	const duration = end - start;
 	console.log(`${name} took ${duration}ms`);
+
+	timings.delete(name);
 }
 
 export const Timed = {
