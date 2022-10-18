@@ -323,8 +323,6 @@ export class DevtoolsInstance {
 		this.currentAction = action;
 		const id           = this.currentGroupId++;
 
-		console.log('actionSetup', id);
-
 		action.before((payload) => {
 			this.api.addTimelineEvent({
 				layerId : inspectorId,
