@@ -1,10 +1,12 @@
 import jetpack from "fs-jetpack";
 import ts from "typescript";
 import crypto from 'crypto';
-import {extendsStore, isVueBinding} from "./AstHelpers/Classes";
+import {extendsStore, isStateGetterNode, isVueBinding} from "./AstHelpers/Classes";
 import {isExportConst} from "./AstHelpers/Exports";
 import {createStoreLoaderModule} from "./Builders/StoreLoader";
 import {createVueDtsFile} from "./Builders/VueDtsFile";
+import {errorMessages} from "./ErrorMessages";
+import {Linting} from "./Linting";
 import {basicLog, colors, errorLog, infoLog, successLog, warnLog} from "./Logger";
 import {ActionMeta} from "./Meta/ActionMeta";
 import {StoreMeta} from "./Meta/StoreMeta";
@@ -139,6 +141,8 @@ export class Context {
 	}
 
 	process() {
+		Linting.reset();
+
 		this.stores = [];
 		for (const {module, store} of this.modules) {
 			const outStore = this.processModule(module, store);
@@ -146,6 +150,8 @@ export class Context {
 
 			this.stores.push(outStore.finalize());
 		}
+
+		Linting.print();
 	}
 
 	writeFiles() {
@@ -191,6 +197,11 @@ export class Context {
 	}
 
 	private processModule(module: ts.SourceFile, store: StoreMeta): StoreMeta | undefined {
+
+		const linter = Linting.factory(module);
+
+		let classDeclarationNode: ts.Node = null;
+
 		for (let statement of module.statements) {
 
 			// Search for our `export myStoreName = new MyStore();` statement and extract `myStoreName`
@@ -201,6 +212,8 @@ export class Context {
 
 			// Search for our `export class MyStore extends Store<MyStore, IMyStoreState> {` statement and extract `MyStore`
 			if (!ts.isClassDeclaration(statement)) continue;
+			// Used for export linting
+			classDeclarationNode = statement;
 
 			// Ensure our class extends Store
 			if (!extendsStore(statement)) continue;
@@ -212,6 +225,7 @@ export class Context {
 			// Now we'll process the members of the class
 			// We need to extract Action meta & the vue binding(if one is defined)
 			for (let member of statement.members) {
+
 				// Now we have to look for the `public static vueBinding = 'x';`
 				// statement and pull out it's value.
 				const [isBinding, vueBinding] = isVueBinding(member);
@@ -223,8 +237,27 @@ export class Context {
 				if (ts.isMethodDeclaration(member) && ts.isIdentifier(member.name)) {
 					store.actions.push(new ActionMeta(member, member.name.text));
 				}
+
+				const [isStateGetter, stateObj] = isStateGetterNode(member, linter);
+				if (isStateGetter && !store.stateObj) {
+					store.setStateObject(stateObj);
+				}
+
+				if(ts.isGetAccessor(member) && ts.isIdentifier(member.name)) {
+					store.addGetter(member);
+				}
 			}
 		}
+
+		if (!store.exportName) {
+			linter.error(errorMessages.store.missingExport(store.className), classDeclarationNode);
+		}
+
+		if (!store.stateObj) {
+			linter.error(errorMessages.stateGetter.missingStateGetter(store.className), classDeclarationNode);
+		}
+
+		linter.merge();
 
 		return store.isValid() ? store : undefined;
 	}

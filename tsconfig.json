@@ -8,6 +8,7 @@
       "DOM"
     ],
     "moduleResolution": "Node",
+    "experimentalDecorators": true,
     "strict": false,
     "sourceMap": true,
     "resolveJsonModule": true,

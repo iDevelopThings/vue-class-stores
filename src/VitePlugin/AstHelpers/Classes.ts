@@ -1,4 +1,7 @@
 import ts from "typescript";
+import {errorMessages} from "../ErrorMessages";
+import {Linter} from "../Linting";
+import {isPublicOrPrivate, isStatic} from "./Modifiers";
 
 /**
  * Check if our class extends the main Store class
@@ -45,4 +48,56 @@ export function isVueBinding(member: ts.ClassElement): [is: boolean, binding: st
 	if (!ts.isStringLiteral(member.initializer)) return [false, undefined];
 
 	return [member.name.text === "vueBinding", member.initializer.text];
+}
+
+
+export function isStateGetterNode(member: ts.ClassElement, linter: Linter): [is: boolean, obj: ts.ObjectLiteralExpression] {
+	const result: [is: boolean, obj: ts.ObjectLiteralExpression] = [false, undefined];
+
+	if (ts.isPropertyDeclaration(member)) return result;
+	if (!ts.isIdentifier(member.name)) return result;
+	if (member.name.text !== 'state') return result;
+
+	// Ensure our state getter is actually a getter
+	if (!ts.isGetAccessor(member)) {
+		linter.error(errorMessages.stateGetter.mustBeGetter(), member);
+
+		return result;
+	}
+
+	// Ensure it's defined as public or private
+	if (!isPublicOrPrivate(member.modifiers)) {
+		linter.error(errorMessages.stateGetter.publicOrPrivate(), member);
+
+		return result;
+	}
+
+	// Ensure it's not static
+	if (isStatic(member.modifiers)) {
+		linter.error(errorMessages.stateGetter.nonStatic(), member);
+
+		return result;
+	}
+
+	const body = member.body;
+	if (!ts.isBlock(body)) return result;
+
+	const statements = body.statements;
+	if (statements.length !== 1) {
+		linter.error(errorMessages.stateGetter.invalidBody(), member);
+		return result;
+	}
+
+	const statement = statements[0];
+	if (!ts.isReturnStatement(statement)) {
+		linter.error(errorMessages.stateGetter.invalidBody(), member);
+		return result;
+	}
+
+	if (!ts.isObjectLiteralExpression(statement.expression)) {
+		linter.error(errorMessages.stateGetter.invalidBody(), member);
+		return result;
+	}
+
+	return [true, statement.expression];
 }

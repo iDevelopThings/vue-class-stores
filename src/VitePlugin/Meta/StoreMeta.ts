@@ -1,8 +1,10 @@
 import path from "path";
 import ts from "typescript";
 import {formatVueBindingName} from "../../Common";
+import {hasDecorator} from "../AstHelpers/Modifiers";
 import {createLazyImportGlobNode} from "../Builders/Imports";
 import {unwrappableNode} from "../Builders/Object";
+import {debugLog, infoLog} from "../Logger";
 import {PluginConfig} from "../PluginConfig";
 import {ActionMeta} from "./ActionMeta";
 
@@ -39,6 +41,10 @@ export class StoreMeta {
 
 	public actions: ActionMeta[] = [];
 
+	public stateKeys: string[]                  = [];
+	public getters: { n: string, c: boolean }[] = [];
+
+	public stateObj: ts.ObjectLiteralExpression;
 
 	constructor(file: ts.SourceFile) {
 		this.absFilePath      = file.fileName;
@@ -71,8 +77,36 @@ export class StoreMeta {
 			importPath : this.loaderImportPath,
 			exportName : this.exportName,
 			vueBinding : this.vueBinding,
+			stateKeys  : this.stateKeys,
+			getters    : this.getters,
 			actions    : JSON.parse(JSON.stringify(this.actions)),
 			module     : unwrappableNode(createLazyImportGlobNode(this.loaderImportPath))
 		};
 	}
+
+	public setStateObject(stateObj: ts.ObjectLiteralExpression): void {
+		this.stateObj = stateObj;
+
+		for (let property of stateObj.properties) {
+			if (ts.isPropertyAssignment(property)) {
+				this.stateKeys.push(property.name.getText());
+			}
+		}
+
+		debugLog(`Found state keys ${this.stateKeys.join(", ")} in ${this.className}`);
+	}
+
+	public addGetter(member: ts.GetAccessorDeclaration): void {
+		if (member.name.getText() === 'state') {
+			return;
+		}
+
+		this.getters.push({
+			n : member.name.getText(),
+			c : hasDecorator(member, 'Computed'),
+		});
+
+		debugLog(`Found getter ${member.name.getText()} in ${this.className}`);
+	}
+
 }
