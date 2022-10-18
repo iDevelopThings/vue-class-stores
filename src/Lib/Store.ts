@@ -1,60 +1,49 @@
 import {reflect} from "@idevelopthings/reflect-extensions";
 import {klona} from "klona";
-import {computed, EffectScope, effectScope, getCurrentScope, isReactive, isRef, onScopeDispose, reactive, ref, toRaw, toRef, toRefs, unref, watch, WatchOptions} from "vue";
-import {isPlainObject, mergeReactiveObjects, Subscription} from "../Common";
+import get from 'lodash.get';
+import set from 'lodash.set';
+import {computed, EffectScope, effectScope, getCurrentScope, onScopeDispose, reactive, toRef, watch, WatchOptions} from "vue";
+import {mergeReactiveObjects, Subscription} from "../Common";
 import DevTools from "../DevTools/DevTools";
 import type {Path, PathValue} from "./DotPath";
 import {Logger} from "./Logger";
-import {BaseStoreImpl, PatchOperationFunction, PatchOperationObject, StoreAction, StoreActionWithSubscriptions, StoreCustomProperties} from "./StoreTypes";
 import type {BaseStoreClass, CustomWatchOptions, WatchFunction, WatchHandler} from "./StoreTypes";
-import {ClassStoreSymbol, DescriptorGroups, getDescriptors, getDescriptorsGrouped, makeReactive} from "./StoreUtils";
-import get from 'lodash.get';
-import set from 'lodash.set';
+import type {BaseStoreImpl, PatchOperationFunction, PatchOperationObject, StoreAction, StoreActionWithSubscriptions} from "./StoreTypes";
+import {ClassStoreSymbol, type DescriptorGroups, getDescriptorsGrouped, makeReactive} from "./StoreUtils";
+import type {StoreExtensionDefinitions, StoreGetterInfo, StoreMeta, StoreMetaGetter} from "./Types";
 
-export const InternalStoreKeys = [
-	'constructor',
-	'state',
-	'vueBinding',
-	'$watch',
-	'$patch',
-	'$reset',
-	'$onAction',
-	'$getState',
-	'__scope',
-	'__addExtensions',
-	'__addExtension',
-	'__setState',
-	'__originalState',
-	'__state',
-	'__stateWatcherFuncs',
-	'__descriptors',
-	'__handlers',
-	'__actionHandlers',
-	'__bootStore',
-];
 
 export class BaseStore<TStore, TState> implements BaseStoreImpl<TStore, TState> {
+	[ClassStoreSymbol] = null;
+
+	private __scope: EffectScope;
+	private __storeMeta: StoreMeta;
+	private __getters: { [key: string]: StoreGetterInfo }  = {};
+	private __actions: { [key: string]: (...args) => any } = {};
+
+	private __extensions: StoreExtensionDefinitions = {
+		getters    : {},
+		actions    : {},
+		properties : {}
+	};
 
 	private __originalState: TState;
 	private __state: any;
+
 	private __stateWatcherFuncs: { [K in keyof TState]: WatchFunction<TState[K]> } = {} as any;
 
-	[ClassStoreSymbol] = null;
-
-	public __descriptors: DescriptorGroups = {};
-
-	public __handlers: Subscription = new Subscription();
-
+	public __handlers: Subscription                                         = new Subscription();
 	public __actionHandlers: StoreActionWithSubscriptions<TStore, TState>[] = [];
 
-	private __scope: EffectScope;
 
 	constructor() {
 
 	}
 
-	__bootStore() {
+	__bootStore(meta: StoreMeta) {
 		Logger.label('Store').debug('Booting store', this.constructor.name);
+
+		this.__storeMeta     = meta;
 		this.__originalState = klona((this as any).state);
 		this.__state         = reactive(klona((this as any).state));
 
@@ -64,11 +53,8 @@ export class BaseStore<TStore, TState> implements BaseStoreImpl<TStore, TState> 
 
 		this.__scope = effectScope(true);
 		this.__scope.run(() => {
-			this.#prepareState(this.__originalState);
-
-
-			this.__descriptors = getDescriptorsGrouped(this, InternalStoreKeys);
-
+			this.#defineState();
+			this.#defineGetters();
 			this.#defineActions();
 
 			const mutationWatcher = watch(() => JSON.parse(JSON.stringify((this as any).__state)), (newVal, oldVal) => {
@@ -101,7 +87,6 @@ export class BaseStore<TStore, TState> implements BaseStoreImpl<TStore, TState> 
 	#defineStateProperty(key: string) {
 		const stateSetter = (value) => {
 			this.__state[key] = value;
-			//			toRef(this.__state, key).value = value;
 		};
 
 		const stateGetter = () => {
@@ -144,22 +129,74 @@ export class BaseStore<TStore, TState> implements BaseStoreImpl<TStore, TState> 
 	 *
 	 * @private
 	 */
-	#prepareState(stateObject) {
-		if (!stateObject) {
+	#defineState() {
+		if (!this.__originalState) {
 			throw new Error('State object is not defined...');
 		}
 
-		for (let [key, value] of Object.entries(stateObject)) {
-			this.__state[key] = makeReactive(stateObject[key]);
-
+		for (let key of this.__storeMeta.stateKeys) {
+			this.__state[key] = makeReactive(this.__originalState[key]);
 			this.#defineStateProperty(key);
+		}
+
+	}
+
+	/**
+	 * For all of the getters located by the generator, we'll override the original getter
+	 *
+	 * We'll store the accessor to the original getter on __getters, if the getter has @Computed
+	 * decorator, we'll make it computed and store that on __getters instead, otherwise it's the getter function
+	 *
+	 * @private
+	 */
+	#defineGetters() {
+		for (let getter of this.__storeMeta.getters) {
+			this.#defineGetter(getter);
 		}
 	}
 
+	#defineGetter(getter: StoreMetaGetter, getterFunc?: (() => any)) {
+		const getterDescriptor = Reflect.getOwnPropertyDescriptor(this.constructor.prototype, getter.n);
+		if (!getterDescriptor && !getterFunc) {
+			Logger.label('Store').warn(`Getter descriptor "${getter.n}" could not be found on: `, this.constructor.name);
+			return;
+		}
+
+		if (!getterFunc) {
+			getterFunc = getterDescriptor.get.bind(this);
+		}
+
+		this.__getters[getter.n] = {
+			type  : getter.c ? 'computed' : 'function',
+			value : (getter.c ? computed(getterFunc) : getterFunc) as any
+		};
+
+		Object.defineProperty((this as any), getter.n, {
+			configurable : getterDescriptor?.configurable || true,
+			enumerable   : getterDescriptor?.enumerable || true,
+			get          : () => {
+				const getterInfo = this.__getters[getter.n];
+
+				return getterInfo.type === 'computed'
+					? getterInfo.value.value
+					: getterInfo.value();
+			},
+		});
+	}
+
+	/**
+	 * For all the actions located by the generator, we'll proxy access to the original, so we can use `this.$onAction` on them.
+	 *
+	 * @private
+	 */
 	#defineActions() {
-		for (let actionsKey in this.__descriptors.actions) {
-			const actionDescriptor = this.__descriptors.actions[actionsKey];
-			this.#defineAction(actionsKey, actionDescriptor);
+		for (let action of this.__storeMeta.actions) {
+			const actionDescriptor = Reflect.getOwnPropertyDescriptor(this.constructor.prototype, action.name);
+			if (!actionDescriptor) {
+				Logger.label('Store').warn(`Action descriptor "${action.name}" could not be found on: `, this.constructor.name);
+				continue;
+			}
+			this.#defineAction(action.name, actionDescriptor);
 		}
 	}
 
@@ -172,9 +209,12 @@ export class BaseStore<TStore, TState> implements BaseStoreImpl<TStore, TState> 
 	 * @private
 	 */
 	#defineAction(actionsKey: string, actionDescriptor: PropertyDescriptor) {
+
+		this.__actions[actionsKey] = actionDescriptor.value;
+
 		Object.defineProperty(this, actionsKey, {
 			value : (...args) => {
-				const actionBuilder = reflect(actionDescriptor.value)
+				const actionBuilder = reflect(this.__actions[actionsKey])
 					.function()
 					.build()
 					.instance(this);
@@ -352,22 +392,36 @@ export class BaseStore<TStore, TState> implements BaseStoreImpl<TStore, TState> 
 	}
 
 	public __addExtension(extension: { [key: string]: any }) {
-		const descriptors = getDescriptorsGrouped(extension, InternalStoreKeys);
-
-		const state = {...descriptors.getters, ...descriptors.other};
+		const descriptors = getDescriptorsGrouped(extension);
 
 		for (let [key, value] of Object.entries(descriptors.getters)) {
-			Object.defineProperty(this, key, {enumerable : true, configurable : true, value : extension[key]});
-			this.__descriptors.getters[key] = value;
-		}
-		for (let [key, value] of Object.entries(descriptors.other)) {
-			Object.defineProperty(this, key, {enumerable : true, configurable : true, value : extension[key]});
-			this.__descriptors.other[key] = value;
+			if (Reflect.has(BaseStore.prototype, key) || this.__getters[key]) {
+				Logger.label('Store').warn(`Cannot add Getter "${key}" extension to store: "${this.constructor.name}", there is already a getter with that name. Skipping...`);
+				continue;
+			}
+
+			// Define the new getter with a custom function
+			this.#defineGetter({n : key, c : false}, () => extension[key]);
+
+			// Add the getter meta to our internal getters object(so we can use/show it in other places)
+			this.__storeMeta.getters.push({n : key, c : false});
 		}
 
+		/*for (let [key, value] of Object.entries(descriptors.other)) {
+		 Logger.debug(`Adding extension "${key}" to store: "${this.constructor.name}"`, value);
+		 Object.defineProperty(this, key, {enumerable : true, configurable : true, value : extension[key]});
+		 this.__descriptors.other[key] = value;
+		 }*/
+
 		for (let [key, value] of Object.entries(descriptors.actions)) {
+			if (Reflect.has(BaseStore.prototype, key) || this.__actions[key]) {
+				Logger.label('Store').warn(`Cannot add Action "${key}" extension to store: "${this.constructor.name}", there is already an action with that name. Skipping...`);
+				continue;
+			}
+
 			this.#defineAction(key, value);
-			this.__descriptors.actions[key] = value;
+
+			this.__storeMeta.actions.push({name : key, params : []});
 		}
 	}
 

@@ -8,3 +8,14 @@ export function formatVueBindingName(binding: string, storeClassName: string) {
 
 	return "$" + value;
 }
+
+
+export function createExportName(className: string) {
+	className = className.charAt(0).toLowerCase() + className.slice(1);
+
+	if (className.toLowerCase().endsWith('store')) {
+		className = className.slice(0, -5);
+	}
+
+	return className;
+}

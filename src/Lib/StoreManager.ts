@@ -13,17 +13,20 @@ export class StoreManagerInstance {
 	 * Holds store Class Name -> Store Instance
 	 * @type {{[p: string]: StoreType}}
 	 */
-	public stores: { [key: string]: StoreType }               = {};
+	public stores: { [key: string]: StoreType } = {};
+
 	/**
 	 * Holds store Class Name -> Store Module
 	 * @type {{[p: string]: any}}
 	 */
-	public storeModules: { [key: string]: any }               = {};
+	public storeModules: { [key: string]: any } = {};
+
 	/**
 	 * Holds store Class Name -> Store Meta
 	 * @type {{[p: string]: StoreMeta}}
 	 */
-	public storeMeta: { [key: string]: StoreMeta }            = {};
+	public storeMeta: { [key: string]: StoreMeta } = {};
+
 	/**
 	 * Holds a reference of Binding -> Class Name for quick lookup
 	 * @type {{[p: string]: string}}
@@ -41,7 +44,6 @@ export class StoreManagerInstance {
 	 * @returns {{install: (app: App) => void}}
 	 */
 	public boot() {
-		//		Logger.debug('StoreManager boot called...', arguments);
 		if (!arguments?.length) {
 			Logger.error('StoreManager boot called without arguments... this could be a problem with the vue-class-stores vite plugin, please report this on github! <3');
 			return;
@@ -56,8 +58,6 @@ export class StoreManagerInstance {
 		if (!storeLoader) {
 			throw new Error('Store loader is not defined');
 		}
-
-		//		Logger.debug("Store loader passed via transformer: ", storeLoader);
 
 		return {
 			install : (app: App) => {
@@ -102,7 +102,7 @@ export class StoreManagerInstance {
 		}
 
 		const store = storeModule[meta.exportName] as StoreType;
-		store.__bootStore();
+		store.__bootStore(meta);
 		store.vueBinding = meta.vueBinding;
 
 		this.storeModules[meta.className]             = storeModule;

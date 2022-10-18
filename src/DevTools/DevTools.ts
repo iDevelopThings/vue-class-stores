@@ -8,6 +8,7 @@ import {isRef} from "vue";
 import {BaseStore, StoreAction} from "../Lib";
 import {StoreApi} from "../Lib/StoreApi";
 import StoreManager from "../Lib/StoreManager";
+import {StoreGetterComputedInfo, StoreGetterRegularInfo} from "../Lib/Types";
 import type {PluginOptions} from "./types";
 
 const inspectorId = 'vue-class-stores-plugin';
@@ -129,7 +130,7 @@ export class DevtoolsInstance {
 
 		payload.state = {
 			'1. State'   : this.mapInspectorState(store.getAllState()),
-			'2. Getters' : this.mapInspectorGetters({store, instance}, store.getAllGetters()),
+			'2. Getters' : this.mapInspectorGetters(store, store.getAllGetters()),
 			'3. Actions' : this.mapInspectorActions({store, instance}),
 		};
 	}
@@ -172,19 +173,17 @@ export class DevtoolsInstance {
 	/**
 	 * Map our regular `get x():z` getters defined on our store into their own "Getters" list on the inspector panel
 	 *
-	 * @param {any} store
-	 * @param {any} instance
-	 * @param {[key: string, descriptor: PropertyDescriptor][]} allGetters
-	 * @returns {(StateBase | Omit<ComponentState, "type">)[]}
 	 * @private
 	 */
-	private mapInspectorGetters({store, instance}, allGetters: [key: string, descriptor: PropertyDescriptor][]): (StateBase | Omit<ComponentState, "type">)[] {
+	private mapInspectorGetters(store: StoreApi, allGetters: [string, (StoreGetterComputedInfo | StoreGetterRegularInfo)][]): (StateBase | Omit<ComponentState, "type">)[] {
 		return allGetters.map(([key, descriptor]) => {
 			return {
 				key,
 				editable   : false,
-				objectType : 'computed',
-				value      : descriptor.get.call(instance)
+				objectType : typeof descriptor.value === 'function' ? 'other' : 'computed',
+				value      : typeof descriptor.value === 'function'
+					? descriptor.value.call(store.getInstance())
+					: descriptor.value.value
 			};
 		});
 	}

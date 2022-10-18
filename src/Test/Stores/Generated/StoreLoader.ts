@@ -5,6 +5,17 @@ export const stores = [{
         importPath: "../TestingStore.ts",
         exportName: "myTestStore",
         vueBinding: "$myTest",
+        stateKeys: ["someValue", "counter", "nested"],
+        getters: [{
+                n: "storeGetter",
+                c: false
+            }, {
+                n: "someValue",
+                c: false
+            }, {
+                n: "counter",
+                c: false
+            }],
         actions: [{
                 name: "storeFunction",
                 params: []
@@ -35,6 +46,11 @@ export const stores = [{
         importPath: "../UserStore.ts",
         exportName: "userStore",
         vueBinding: "$user",
+        stateKeys: ["email", "boards"],
+        getters: [{
+                n: "email",
+                c: true
+            }],
         actions: [],
         module: () => import.meta.glob("../UserStore.ts", { eager: true })
     }, {
@@ -42,6 +58,23 @@ export const stores = [{
         importPath: "../YeetStore.ts",
         exportName: "yeetStore",
         vueBinding: "$newYeet",
+        stateKeys: ["counter", "inputValue", "banner"],
+        getters: [{
+                n: "counterRef",
+                c: false
+            }, {
+                n: "counter",
+                c: true
+            }, {
+                n: "inputValueRef",
+                c: false
+            }, {
+                n: "inputValue",
+                c: false
+            }, {
+                n: "banner",
+                c: false
+            }],
         actions: [{
                 name: "increment",
                 params: []

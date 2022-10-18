@@ -5,11 +5,9 @@ import type {StoreMeta, StoreType} from "./Types";
 export class StoreApi {
 
 	private readonly store: StoreType;
-	private readonly meta: StoreMeta;
 
-	constructor(store: StoreType, storeMeta: StoreMeta) {
+	constructor(store: StoreType) {
 		this.store = store;
-		this.meta  = storeMeta;
 	}
 
 	public static forBinding(storeBinding: string): StoreApi {
@@ -43,7 +41,7 @@ export class StoreApi {
 			throw new Error(`No store found for binding: ${storeClassName}`);
 		}
 
-		return new StoreApi(store, storeMeta);
+		return new StoreApi(store);
 	}
 
 	getInstance() {
@@ -51,7 +49,7 @@ export class StoreApi {
 	}
 
 	getMeta() {
-		return this.meta;
+		return this.store.__storeMeta;
 	}
 
 	getAllState(): { [key: string]: Ref } {
@@ -59,14 +57,15 @@ export class StoreApi {
 	}
 
 	getAllGetters() {
-		return Object.entries(this.store.__descriptors.getters);
+		return Object.entries(this.store.__getters);
 	}
 
 	getAllActions() {
-		return this.meta.actions.map(action => {
+		return this.store.__storeMeta.actions.map(action => {
 			return [action.name, {
-				...action,
-				value : this.store[action.name],
+				name   : action.name,
+				params : action.params,
+				value  : this.store[action.name],
 			}];
 		});
 	}
@@ -79,8 +78,4 @@ export class StoreApi {
 		return this.store.vueBinding;
 	}
 
-	setState(path: any, value: any): void {
-		console.log('Set state: ' + path + ' = ' + value);
-		(this.store as any).__setState(path, value);
-	}
 }

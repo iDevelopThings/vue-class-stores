@@ -1,4 +1,4 @@
-import {Store} from "@idevelopthings/vue-class-stores/vue";
+import {Computed, Store} from "@idevelopthings/vue-class-stores/vue";
 
 export interface INewYeetStore {
 	counter: number;
@@ -21,6 +21,7 @@ export class NewYeetStore extends Store<NewYeetStore, INewYeetStore>() {
 		return this.$counter;
 	}
 
+	@Computed
 	get counter() {
 		return this.state.counter;
 	}

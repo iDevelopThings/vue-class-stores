@@ -1,4 +1,4 @@
-import {Store} from "@idevelopthings/vue-class-stores/vue";
+import {Computed, Store} from "@idevelopthings/vue-class-stores/vue";
 
 class UserStore extends Store<UserStore, any>() {
 	get state() {
@@ -6,6 +6,11 @@ class UserStore extends Store<UserStore, any>() {
 			email  : '',
 			boards : []
 		};
+	}
+
+	@Computed
+	get email() {
+		return this.$email;
 	}
 }
 

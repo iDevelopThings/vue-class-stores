@@ -1,4 +1,4 @@
-export {BaseStore, InternalStoreKeys, Store} from './Store';
+export {BaseStore, Store} from './Store';
 export {default as StoreManager, StoreManagerInstance} from './StoreManager';
 export {ClassStoreSymbol, makeReactive} from './StoreUtils';
 export type {
@@ -19,3 +19,6 @@ export type {
 	PatchOperation,
 	StoreActionWithSubscriptions,
 } from './StoreTypes';
+
+export const Computed = (target: any, propertyKey: string) => {};
+

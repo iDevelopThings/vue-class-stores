@@ -39,6 +39,7 @@ export function getDescriptorsGrouped(store: any, ignoreKeys: string[] = []): De
 	};
 
 	ignoreKeys.push(
+		'constructor',
 		'__proto__',
 		'hasOwnProperty',
 		'isPrototypeOf',
@@ -78,14 +79,13 @@ export function getDescriptorsGrouped(store: any, ignoreKeys: string[] = []): De
 				descriptorGroups.actions[key] = descriptor;
 				continue;
 			}
-			if (isPlainObject(descriptor.value)) {
-				descriptorGroups.getters[key] = descriptor;
-				continue;
-			}
+
+			descriptorGroups.getters[key] = descriptor;
+			continue;
 		}
 
-		descriptorGroups.other[key] = descriptor;
-		//		console.warn(`Unknown descriptor type for ${key} in ${store.constructor.name}`, descriptor);
+		//		descriptorGroups.other[key] = descriptor;
+		console.warn(`Unknown descriptor type for ${key} in ${store.constructor.name}`, descriptor);
 	}
 
 	if (store.__proto__) {
