@@ -48,7 +48,7 @@ const config: Partial<SiteData<ThemeConfig>> = {
                         collapsible: true,
                         collapsed: true,
                         items: [
-                            {text: 'Defining a getters', link: '/core-concepts/getters#defining-a-getter'},
+                            {text: 'Defining a getter', link: '/core-concepts/getters#defining-a-getter'},
                             {text: 'Computed getters', link: '/core-concepts/getters#computed-getters'},
                         ]
                     },
