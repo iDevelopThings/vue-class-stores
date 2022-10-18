@@ -10,6 +10,7 @@ class UserStore extends Store<UserStore, any>() {
 
 	@Computed
 	get email() {
+
 		return this.$email;
 	}
 }

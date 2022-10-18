@@ -81,10 +81,6 @@ export class StoreManagerInstance {
 		this.didInstantiateStores = true;
 	}
 
-	public handleHotReload(modules: any[]): void {
-
-	}
-
 	private loadStoresFromLoader(storeLoader: StoreLoaderModule): void {
 		for (let store of storeLoader.stores) {
 			this.loadStore(store);
@@ -128,6 +124,38 @@ export class StoreManagerInstance {
 
 		if (this.didInstantiateStores) {
 			this.addExtensions();
+		}
+	}
+
+	/**
+	 * We have to compromise... we can only handle hot reloads for
+	 * store meta or individual store modules.... however,
+	 * It seems like when we use the meta's lazy import module
+	 * function, it fetches the latest store version....
+	 * Just means we have to process all stores on hot reload :|
+	 */
+	loaderReloaded(storesMeta: StoreMeta[]) {
+		for (let storeMeta of storesMeta) {
+			this.storeMeta[storeMeta.className] = storeMeta;
+
+			const storeModuleGlob = storeMeta.module();
+			if (!storeModuleGlob) {
+				throw new Error('Store lazy import; module is not defined for file: ' + storeMeta.importPath);
+			}
+			const storeModule = Object.values(storeModuleGlob)[0];
+			if (!storeModule) {
+				throw new Error('Store module is not defined for file: ' + storeMeta.importPath);
+			}
+			const newStoreInst = storeModule[storeMeta.exportName];
+			if (!newStoreInst) {
+				throw new Error('Store module is not defined for file: ' + storeMeta.importPath);
+			}
+
+			const changes = this.stores[storeMeta.className].__checkForHotReloadChanges(storeMeta);
+			if (changes.hasChanges()) {
+				Logger.label('Store HMR').info('Handling HMR for store: ' + storeMeta.className);
+				this.stores[storeMeta.className].__processHotReloadChanges(changes, newStoreInst, storeMeta);
+			}
 		}
 	}
 

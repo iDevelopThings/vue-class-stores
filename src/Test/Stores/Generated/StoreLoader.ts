@@ -66,6 +66,9 @@ export const stores = [{
                 n: "counter",
                 c: true
             }, {
+                n: "newCounter",
+                c: false
+            }, {
                 n: "inputValueRef",
                 c: false
             }, {
@@ -114,9 +117,3 @@ export const stores = [{
             }],
         module: () => import.meta.glob("../YeetStore.ts", { eager: true })
     }];
-if (import.meta.hot) {
-    import.meta.hot.accept(["./../TestingStore", "./../UserStore", "./../YeetStore"], modules => {
-        console.log("stores updated", modules);
-        StoreManager.handleHotReload(modules);
-    });
-}

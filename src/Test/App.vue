@@ -149,6 +149,9 @@
 
 <script setup lang="ts">
 import {yeetStore} from './Stores/YeetStore';
+
+
+
 /*yeetStore.someGlobalFunc();*/
 
 /*yeetStore.$onAction(({store, args, name, before, error, after}) => {
