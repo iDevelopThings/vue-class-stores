@@ -1,4 +1,5 @@
-import {WritableComputedRef} from "@vue/reactivity";
+import type {WritableComputedRef} from "@vue/reactivity";
+import {LifeCycleEvent} from "../Common/LifeCycle";
 import type {BaseStore} from "./Store";
 
 
@@ -15,7 +16,7 @@ export type StoreType = {
                         } & BaseStorePublic;
 
 
-export type StoreMetaAction = { name: string; params: StoreMetaAction[]; }
+export type StoreMetaAction = { name: string; params: StoreMetaAction[]; lifeCycleEventHandler: LifeCycleEvent | undefined }
 export type StoreMetaActionParam = { name: string, defaultValue: string, type: string }
 
 export type StoreMetaGetter = {
@@ -25,6 +26,13 @@ export type StoreMetaGetter = {
 	c: boolean
 };
 
+export type LifeCycleHooks = {
+	[LifeCycleEvent.BeforeAll]?: () => void | PromiseLike<void>;
+	[LifeCycleEvent.OnInit]?: () => void | PromiseLike<void>;
+	[LifeCycleEvent.OnDispose]?: () => void | PromiseLike<void>;
+	[LifeCycleEvent.AfterAll]?: () => void | PromiseLike<void>;
+}
+
 export type StoreMeta = {
 	className: string;
 	importPath: string;
@@ -33,6 +41,7 @@ export type StoreMeta = {
 	stateKeys: string[];
 	getters: StoreMetaGetter[];
 	actions: StoreMetaAction[];
+	lifeCycleHandlers: { [key: string]: LifeCycleEvent };
 	// Would be something like:
 	// {'SomeStore.ts' : {StoreName : StoreClass, storeExport : Store}}
 	module: () => { [key: string]: { [key: string]: any } };
@@ -60,3 +69,6 @@ export type StoreExtensionDefinitions = {
 	actions: { [key: string]: () => any },
 	properties: { [key: string]: any }
 };
+
+export type StoreGettersList = { [key: string]: StoreGetterInfo };
+export type StoreActionsList = { [key: string]: (...args) => any };

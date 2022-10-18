@@ -50,6 +50,18 @@ export const errorMessages = {
 				'before',
 			),
 		]
+	},
+
+	lifecycle : {
+		multipleLifeCycleHandlersDefined : (methodName, storeName, currentEvent) => [
+			`"${storeName}.${methodName}" has multiple lifecycle decorators defined, there should only be one.`,
+			`The first will be used.`,
+			new CodeSnippet(
+				`@${currentEvent}\n${methodName}() { ... }`,
+				'For example, your method should look like this:',
+			),
+		]
 	}
+
 
 };

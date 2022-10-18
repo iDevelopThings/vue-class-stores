@@ -22,3 +22,8 @@ export type {
 
 export const Computed = (target: any, propertyKey: string) => {};
 
+export const BeforeAll = (target: any, propertyKey: string) => {};
+export const OnInit    = (target: any, propertyKey: string) => {};
+export const OnDispose = (target: any, propertyKey: string) => {};
+export const AfterAll  = (target: any, propertyKey: string) => {};
+

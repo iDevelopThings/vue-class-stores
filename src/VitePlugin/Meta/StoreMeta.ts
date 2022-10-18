@@ -41,6 +41,12 @@ export class StoreMeta {
 
 	public actions: ActionMeta[] = [];
 
+	/**
+	 * Method name -> handler type
+	 * @type {{[p: string]: string}}
+	 */
+	public lifeCycleHandlers: { [key: string]: string } = {};
+
 	public stateKeys: string[]                  = [];
 	public getters: { n: string, c: boolean }[] = [];
 
@@ -75,14 +81,15 @@ export class StoreMeta {
 
 	public metaObject(includeImport: boolean = true) {
 		return {
-			className  : this.className,
-			importPath : this.loaderImportPath,
-			exportName : this.exportName,
-			vueBinding : this.vueBinding,
-			stateKeys  : this.stateKeys,
-			getters    : this.getters,
-			actions    : JSON.parse(JSON.stringify(this.actions)),
-			module     : unwrappableNode(createLazyImportGlobNode(this.loaderImportPath))
+			className         : this.className,
+			importPath        : this.loaderImportPath,
+			exportName        : this.exportName,
+			vueBinding        : this.vueBinding,
+			stateKeys         : this.stateKeys,
+			getters           : this.getters,
+			lifeCycleHandlers : this.lifeCycleHandlers,
+			actions           : JSON.parse(JSON.stringify(this.actions)),
+			module            : unwrappableNode(createLazyImportGlobNode(this.loaderImportPath))
 		};
 	}
 
@@ -109,4 +116,7 @@ export class StoreMeta {
 		});
 	}
 
+	public addLifeCycleHandler(method: ts.MethodDeclaration, lifeCycleEvent: string): void {
+		this.lifeCycleHandlers[method.name.getText()] = lifeCycleEvent;
+	}
 }

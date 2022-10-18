@@ -16,6 +16,7 @@ export const stores = [{
                 n: "counter",
                 c: false
             }],
+        lifeCycleHandlers: {},
         actions: [{
                 name: "storeFunction",
                 params: []
@@ -51,6 +52,7 @@ export const stores = [{
                 n: "email",
                 c: true
             }],
+        lifeCycleHandlers: {},
         actions: [],
         module: () => import.meta.glob("../UserStore.ts", { eager: true })
     }, {
@@ -78,6 +80,11 @@ export const stores = [{
                 n: "banner",
                 c: false
             }],
+        lifeCycleHandlers: {
+            beforeAll: "BeforeAll",
+            afterAll: "AfterAll",
+            onInit: "OnInit"
+        },
         actions: [{
                 name: "increment",
                 params: []
@@ -114,6 +121,18 @@ export const stores = [{
             }, {
                 name: "doSomething",
                 params: []
+            }, {
+                name: "beforeAll",
+                params: [],
+                lifeCycleEventHandler: "BeforeAll"
+            }, {
+                name: "afterAll",
+                params: [],
+                lifeCycleEventHandler: "AfterAll"
+            }, {
+                name: "onInit",
+                params: [],
+                lifeCycleEventHandler: "OnInit"
             }],
         module: () => import.meta.glob("../YeetStore.ts", { eager: true })
     }];

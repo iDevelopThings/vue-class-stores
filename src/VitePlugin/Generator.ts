@@ -239,7 +239,7 @@ export class Context {
 
 				// Check if our member is an action, if it is we'll store some meta for it
 				if (ts.isMethodDeclaration(member) && ts.isIdentifier(member.name)) {
-					store.actions.push(new ActionMeta(member, member.name.text));
+					store.actions.push(new ActionMeta(member, linter, store));
 				}
 
 				const [isStateGetter, stateObj] = isStateGetterNode(member, linter);

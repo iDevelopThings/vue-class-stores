@@ -4,12 +4,13 @@ import get from 'lodash.get';
 import set from 'lodash.set';
 import {computed, EffectScope, effectScope, getCurrentScope, onScopeDispose, reactive, toRef, watch, WatchOptions} from "vue";
 import {mergeReactiveObjects, Subscription} from "../Common";
+import {LifeCycleEvent} from "../Common/LifeCycle";
 import DevTools from "../DevTools/DevTools";
 import type {Path, PathValue} from "./DotPath";
 import {Logger} from "./Logger";
 import type {BaseStoreClass, BaseStoreImpl, CustomWatchOptions, PatchOperationFunction, PatchOperationObject, StoreAction, StoreActionWithSubscriptions, WatchFunction, WatchHandler} from "./StoreTypes";
 import {ClassStoreSymbol, getDescriptorsGrouped, makeReactive} from "./StoreUtils";
-import type {StoreExtensionDefinitions, StoreGetterInfo, StoreMeta, StoreMetaGetter} from "./Types";
+import type {LifeCycleHooks, StoreActionsList, StoreExtensionDefinitions, StoreGettersList, StoreMeta, StoreMetaGetter} from "./Types";
 
 type HotReloadChange<T> = { added: T, removed: T };
 type HotReloadChanges = {
@@ -24,8 +25,14 @@ export class BaseStore<TStore, TState> implements BaseStoreImpl<TStore, TState> 
 
 	private __scope: EffectScope;
 	private __storeMeta: StoreMeta;
-	private __getters: { [key: string]: StoreGetterInfo }  = {};
-	private __actions: { [key: string]: (...args) => any } = {};
+	private __getters: StoreGettersList      = {};
+	private __actions: StoreActionsList      = {};
+	private __lifecycleHooks: LifeCycleHooks = {
+		AfterAll  : () => {},
+		BeforeAll : () => {},
+		OnInit    : () => {},
+		OnDispose : () => {},
+	};
 
 	private __extensions: StoreExtensionDefinitions = {
 		getters    : {},
@@ -47,16 +54,24 @@ export class BaseStore<TStore, TState> implements BaseStoreImpl<TStore, TState> 
 
 	}
 
-	__bootStore(meta: StoreMeta) {
-		Logger.label('Store').debug('Booting store', this.constructor.name);
+	__preBooting() {
+		Logger.label('Store - BeforeAll').debug('Pre Booting store', this.constructor.name);
 
-		this.__storeMeta     = meta;
+		this[ClassStoreSymbol] = this.constructor as unknown as BaseStoreClass<TStore, TState>;
+
 		this.__originalState = klona((this as any).state);
 		this.__state         = reactive(klona((this as any).state));
 
 		Object.defineProperty(this, 'state', {value : {}, configurable : true});
 
-		this[ClassStoreSymbol] = this.constructor as unknown as BaseStoreClass<TStore, TState>;
+		for (let [method, event] of Object.entries(this.__storeMeta.lifeCycleHandlers)) {
+			this.__lifecycleHooks[event] = this.__wrapHookCall(event, this[method].bind(this));
+		}
+	}
+
+	__bootStore() {
+		Logger.label('Store').debug('Booting store', this.constructor.name);
+
 
 		this.__scope = effectScope(true);
 		this.__scope.run(() => {
@@ -497,6 +512,28 @@ export class BaseStore<TStore, TState> implements BaseStoreImpl<TStore, TState> 
 		}
 	}
 
+	public __getHook(event: LifeCycleEvent) {
+		return this.__lifecycleHooks[event];
+	}
+
+	private __wrapHookCall(event: LifeCycleEvent, fn: () => any) {
+		return () => {
+			let result;
+			try {
+				result = fn();
+				if (result instanceof Promise) {
+					result.catch(e => Logger.label('LifeCycle - ' + event).error(e));
+				}
+			} catch (error) {
+				Logger.label('LifeCycle - ' + event).error(error);
+			}
+		};
+	}
+
+	public __callHook(event: LifeCycleEvent) {
+		const handler = this.__getHook(event);
+		return handler();
+	}
 
 	public __checkForHotReloadChanges(newMeta: StoreMeta): HotReloadChanges {
 		// First, we'll compare our new store meta with the old version

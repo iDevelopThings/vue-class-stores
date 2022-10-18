@@ -1,4 +1,4 @@
-import {Computed, Store} from "@idevelopthings/vue-class-stores/vue";
+import {AfterAll, BeforeAll, Computed, OnInit, Store} from "@idevelopthings/vue-class-stores/vue";
 
 export interface INewYeetStore {
 	counter: number;
@@ -86,6 +86,20 @@ export class NewYeetStore extends Store<NewYeetStore, INewYeetStore>() {
 
 	doSomething() {}
 
+	@BeforeAll
+	beforeAll() {
+		console.log('hi from: ',this.constructor.name, 'beforeAll');
+	}
+
+	@AfterAll
+	afterAll() {
+		console.log('hi from: ',this.constructor.name, 'afterAll');
+	}
+
+	@OnInit
+	onInit() {
+		console.log('hi from: ',this.constructor.name, 'onInit');
+	}
 }
 
 export const yeetStore = new NewYeetStore();

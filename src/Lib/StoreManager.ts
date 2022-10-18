@@ -1,7 +1,8 @@
 import {App} from "@vue/runtime-core";
+import {LifeCycleEvent} from "../Common/LifeCycle";
 import {DevTools} from "./../DevTools";
 import {Logger} from "./Logger";
-import type {StoreLoaderModule, StoreMeta, StoreType} from "./Types";
+import type {LifeCycleHooks, StoreLoaderModule, StoreMeta, StoreType} from "./Types";
 
 
 export class StoreManagerInstance {
@@ -81,13 +82,39 @@ export class StoreManagerInstance {
 		this.didInstantiateStores = true;
 	}
 
-	private loadStoresFromLoader(storeLoader: StoreLoaderModule): void {
-		for (let store of storeLoader.stores) {
-			this.loadStore(store);
+	private callLifeCycleHandlers(handlers: (() => any)[], event: LifeCycleEvent) {
+		for (let handler of handlers) {
+			try {
+				handler();
+			} catch (e) {
+				Logger.label('StoreManager').error('Error during life cycle event: ' + event, e);
+			}
 		}
 	}
 
-	private loadStore(meta: StoreMeta) {
+	private loadStoresFromLoader(storeLoader: StoreLoaderModule): void {
+
+		const beforeAllHandlers = [];
+		const afterAllHandlers  = [];
+
+		for (let store of storeLoader.stores) {
+			const instance = this.prepareStore(store);
+			instance.__preBooting();
+
+			beforeAllHandlers.push(instance.__getHook(LifeCycleEvent.BeforeAll));
+			afterAllHandlers.push(instance.__getHook(LifeCycleEvent.AfterAll));
+		}
+
+		this.callLifeCycleHandlers(beforeAllHandlers, LifeCycleEvent.BeforeAll);
+
+		for (let [className, store] of Object.entries(this.stores)) {
+			this.loadStore(store);
+		}
+
+		this.callLifeCycleHandlers(afterAllHandlers, LifeCycleEvent.AfterAll);
+	}
+
+	private prepareStore(meta: StoreMeta) {
 		const storeModuleGlob = meta.module();
 		if (!storeModuleGlob) {
 			throw new Error('Store lazy import; module is not defined for file: ' + meta.importPath);
@@ -97,20 +124,28 @@ export class StoreManagerInstance {
 			throw new Error('Store module is not defined for file: ' + meta.importPath);
 		}
 
-		const store = storeModule[meta.exportName] as StoreType;
-		store.__bootStore(meta);
-		store.vueBinding = meta.vueBinding;
+		const store       = storeModule[meta.exportName] as StoreType;
+		store.__storeMeta = meta;
+		store.vueBinding  = meta.vueBinding;
 
 		this.storeModules[meta.className]             = storeModule;
 		this.storeMeta[meta.className]                = meta;
 		this.stores[meta.className]                   = store;
 		this.storeBindingToClassName[meta.vueBinding] = meta.className;
 
-		this.app.config.globalProperties[meta.vueBinding] = store;
+		return store;
+	}
+
+	private loadStore(store: StoreType) {
+		store.__bootStore();
+
+		this.app.config.globalProperties[store.vueBinding] = store;
 
 		store.__addExtensions(this.extensions.map(extensionFunc => extensionFunc()));
 
-		Logger.label('StoreManager').success('Registered store: ', store);
+//		Logger.label('StoreManager').success('Registered store: ', store);
+
+		store.__callHook(LifeCycleEvent.OnInit);
 	}
 
 	private addExtensions() {
