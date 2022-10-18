@@ -1,50 +1,21 @@
 import jetpack from "fs-jetpack";
-import {FSJetpack} from "fs-jetpack/types";
-import * as path from "path";
 import ts from "typescript";
 import crypto from 'crypto';
-import {formatVueBindingName} from "../Common";
-import {createLazyImportGlobNode, createRelativeImportNode} from "./Builders/Imports";
-import {unwrappableNode} from "./Builders/Object";
+import {extendsStore, isVueBinding} from "./AstHelpers/Classes";
+import {isExportConst} from "./AstHelpers/Exports";
 import {createStoreLoaderModule} from "./Builders/StoreLoader";
+import {createVueDtsFile} from "./Builders/VueDtsFile";
 import {basicLog, colors, errorLog, infoLog, successLog, warnLog} from "./Logger";
-import {FullConfig} from "./types";
-import uniq from 'lodash.uniq';
+import {ActionMeta} from "./Meta/ActionMeta";
+import {StoreMeta} from "./Meta/StoreMeta";
+import {PluginConfig} from "./PluginConfig";
+import {TS} from "./TS";
+import {Timed} from "./Utils/Timed";
 
 const {factory} = ts;
 
-export type StoreInfo = {
-	filePath?: string;
-	name?: string;
-	/**
-	 * The name of the class that extends Store
-	 */
-	className?: string,
-	/**
-	 * If the dev defined `public static vueBinding = 'x';` in their store, this will hold that value
-	 */
-	vueBinding?: string,
-	/**
-	 * This will hold the name of our store export `export const store = new MyStore();`
-	 */
-	exportName?: string,
-}
-
-
 export class Context {
 
-	public program: ts.Program;
-
-	/**
-	 * File paths to all files in the project(loaded by typescript compiler)
-	 * @type {string[]}
-	 */
-	public filePaths: string[]                  = [];
-	/**
-	 * File paths to all of our store files in the project
-	 * @type {string[]}
-	 */
-	public storeFilePaths: string[];
 	/**
 	 * When we first load our stores, we'll take a hash of the content
 	 * Later on this hash will be used when there is a change, mainly to
@@ -61,69 +32,25 @@ export class Context {
 	 */
 	public modules: { module: ts.SourceFile, store: StoreMeta }[] = [];
 
+	/**
+	 * All of our store meta classes which hold information on all our stores.
+	 *
+	 * @type {StoreMeta[]}
+	 */
 	public stores: StoreMeta[] = [];
 
-	public config: Partial<FullConfig>;
-	public compilerHost: ts.CompilerHost;
-	public printer: ts.Printer;
-	public typeChecker: ts.TypeChecker;
-	public parsedCommandLine: ts.ParsedCommandLine;
+	public init() {
+		Timed.start('generator.init');
 
-	public static instance: Context;
-
-	/**
-	 * This is the directory where all of our generated files will be stored
-	 * @type {FSJetpack}
-	 * @private
-	 */
-	public generatedDir: FSJetpack;
-
-	public init(pluginConfig: Partial<FullConfig>) {
-		Context.instance = this;
-
-		this.config = pluginConfig;
-
-		const configPath = ts.findConfigFile(pluginConfig.projectRoot, ts.sys.fileExists, "tsconfig.json");
-		if (!configPath) {
-			throw new Error("Could not find a valid 'tsconfig.json'.");
-		}
-		this.parsedCommandLine = ts.parseJsonConfigFileContent(ts.readConfigFile(configPath, ts.sys.readFile).config, ts.sys, "./");
-
-		this.generatedDir = jetpack.dir(this.config.storesDirectory.path(pluginConfig.generatedDirName));
-
-		this.setFilePaths();
-
-		this.compilerHost = ts.createCompilerHost(this.parsedCommandLine.options);
-		this.program      = ts.createProgram(this.filePaths, this.parsedCommandLine.options, this.compilerHost);
-		this.printer      = ts.createPrinter({newLine : ts.NewLineKind.LineFeed});
-		this.typeChecker  = this.program.getTypeChecker();
+		PluginConfig.setStoreFilePaths();
+		TS.setup();
 
 		this.reloadModules(false);
 
-		this.loadGeneratedFileHash(pluginConfig.storesFileName);
-		this.loadGeneratedFileHash(pluginConfig.storeLoaderFile);
-	}
+		this.loadGeneratedFileHash(PluginConfig.storesFileName);
+		this.loadGeneratedFileHash(PluginConfig.storeLoaderFile);
 
-	/**
-	 * Set the store file paths & all project file paths
-	 *
-	 * @returns {string[]}
-	 */
-	public setFilePaths(): string[] {
-		const paths = this.config.storesDirectory.find({
-			directories : false,
-			files       : true,
-			recursive   : true,
-			matching    : ['*Store.ts', '*store.ts'],
-		}).map(
-			filePath => ts.sys.resolvePath(this.config.storesDirectory.path(filePath))
-		);
-
-		this.storeFilePaths = paths;
-
-		return this.filePaths = uniq(paths.concat(...this.parsedCommandLine.fileNames.map(
-			f => ts.sys.resolvePath(f)
-		)));
+		Timed.end('generator.init');
 	}
 
 	/**
@@ -131,18 +58,36 @@ export class Context {
 	 */
 	public reloadModules(reloadFilePaths: boolean = true) {
 		if (reloadFilePaths) {
-			this.setFilePaths();
+			PluginConfig.setStoreFilePaths();
 		}
 
-		this.modules = this.program.getSourceFiles()
-			.filter(module => this.storeFilePaths.includes(module.fileName))
-			.map(module => ({module, store : new StoreMeta(module, this.config.storesPath)}));
+		this.modules = TS.program.getSourceFiles()
+			.reduce((acc, source) => {
+				if (!PluginConfig.storeFilePaths.includes(source.fileName)) {
+					return acc;
+				}
 
-		for (let module of this.modules) {
-			this.addFileHash(module.module.fileName, module.module.getFullText());
-		}
+				acc.push({
+					module : source,
+					store  : new StoreMeta(source),
+				});
+
+				this.addFileHash(source.fileName, source.getFullText());
+
+				return acc;
+			}, []);
 	}
 
+	/**
+	 * Create a file hash for the specified file path + content
+	 *
+	 * This will be used to prevent over-writing to the FS when the content is the same
+	 *
+	 * @param {string} filePath
+	 * @param {string} content
+	 * @returns {boolean}
+	 * @private
+	 */
 	private addFileHash(filePath: string, content: string) {
 		const hash = crypto.createHash('sha256').update(content).digest('hex');
 
@@ -161,10 +106,16 @@ export class Context {
 		return true;
 	}
 
+	/**
+	 * Quick helper method to setup file hashes for generated files
+	 *
+	 * @param {string} file
+	 * @private
+	 */
 	private loadGeneratedFileHash(file: string) {
-		if (this.generatedDir.exists(file)) {
-			const content = this.generatedDir.read(file);
-			this.addFileHash(this.generatedDir.path(file), content);
+		if (PluginConfig.generatedDir.exists(file)) {
+			const content = PluginConfig.generatedDir.read(file);
+			this.addFileHash(PluginConfig.generatedDir.path(file), content);
 		}
 	}
 
@@ -213,22 +164,22 @@ export class Context {
 
 		const vueDtsFile = createVueDtsFile(this.stores);
 
-		const {didWrite, filePath} = this.writeTsFile(this.generatedDir.path(this.config.storesFileName), vueDtsFile);
+		const {didWrite, filePath} = this.writeTsFile(PluginConfig.vueDtsPath, vueDtsFile);
 		if (didWrite) {
 			successLog(
 				'Generated stores vue declaration file at:',
-				colors.ResetWrap(this.generatedDir.path(filePath).replace(this.config.projectRoot, ''))
+				colors.ResetWrap(PluginConfig.generatedDir.path(filePath).replace(PluginConfig.projectRoot, ''))
 			);
 		}
 
 		const loaderResult = this.writeTsFile(
-			this.generatedDir.path(this.config.storeLoaderFile),
+			PluginConfig.generatedDir.path(PluginConfig.storeLoaderFile),
 			createStoreLoaderModule(this.stores)
 		);
 		if (loaderResult.didWrite) {
 			successLog(
 				'Generated store loader file at:',
-				colors.ResetWrap(this.generatedDir.path(loaderResult.filePath).replace(this.config.projectRoot, ''))
+				colors.ResetWrap(PluginConfig.generatedDir.path(loaderResult.filePath).replace(PluginConfig.projectRoot, ''))
 			);
 		}
 
@@ -243,65 +194,36 @@ export class Context {
 		for (let statement of module.statements) {
 
 			// Search for our `export myStoreName = new MyStore();` statement and extract `myStoreName`
-			if (ts.isVariableStatement(statement)) {
-				if (statement.modifiers?.some(m => m.kind === ts.SyntaxKind.ExportKeyword) && statement?.declarationList?.declarations?.length === 1) {
-					const declaration = statement.declarationList.declarations[0];
-					if (ts.isIdentifier(declaration.name)) {
-						store.exportName = declaration.name.text;
-					}
-				}
+			const [isExport, storeName] = isExportConst(statement);
+			if (isExport) {
+				store.exportName = storeName;
 			}
 
 			// Search for our `export class MyStore extends Store<MyStore, IMyStoreState> {` statement and extract `MyStore`
-			if (ts.isClassDeclaration(statement)) {
-				// Ensure our class extends Store
-				const extendsStore = statement.heritageClauses?.some(h => {
-					if (h.token !== ts.SyntaxKind.ExtendsKeyword)
-						return false;
+			if (!ts.isClassDeclaration(statement)) continue;
 
-					return h.types.some(t => {
-						if (!ts.isExpressionWithTypeArguments(t)) return false;
-						if (!ts.isCallExpression(t.expression)) return false;
+			// Ensure our class extends Store
+			if (!extendsStore(statement)) continue;
+			if (!ts.isIdentifier(statement.name)) continue;
 
-						const callExpression = t.expression;
-						if (!ts.isIdentifier(callExpression.expression)) return false;
+			// Store the class name for our store
+			store.className = statement.name.text;
 
-						return callExpression.expression.text?.toLowerCase() === "store";
-					});
-				});
+			// Now we'll process the members of the class
+			// We need to extract Action meta & the vue binding(if one is defined)
+			for (let member of statement.members) {
+				// Now we have to look for the `public static vueBinding = 'x';`
+				// statement and pull out it's value.
+				const [isBinding, vueBinding] = isVueBinding(member);
+				if (isBinding) {
+					store.vueBinding = vueBinding;
+				}
 
-				if (extendsStore && ts.isIdentifier(statement.name)) {
-					store.className = statement.name.text;
-
-					// Now we have to look for the `public static vueBinding = 'x';` statement and pull out it's value.
-					for (let member of statement.members) {
-						if (ts.isPropertyDeclaration(member)) {
-							if (!member.modifiers?.some(m => m.kind === ts.SyntaxKind.StaticKeyword)) continue;
-
-							if (ts.isIdentifier(member.name) && member.name.text === "vueBinding") {
-								if (ts.isStringLiteral(member.initializer)) {
-									store.vueBinding = member.initializer.text;
-									break;
-								}
-							}
-						}
-					}
-
-					const actions = [];
-
-					for (let member of statement.members) {
-						if (ts.isMethodDeclaration(member)) {
-							if (ts.isIdentifier(member.name)) {
-								const action = new ActionMeta(member, member.name.text);
-								actions.push(action);
-							}
-						}
-					}
-
-					store.actions = actions;
+				// Check if our member is an action, if it is we'll store some meta for it
+				if (ts.isMethodDeclaration(member) && ts.isIdentifier(member.name)) {
+					store.actions.push(new ActionMeta(member, member.name.text));
 				}
 			}
-
 		}
 
 		return store.isValid() ? store : undefined;
@@ -318,8 +240,8 @@ export class Context {
 	private writeTsFile(filePath: string, nodes: ts.Node[]) {
 		const result = {didWrite : false, filePath : filePath};
 
-		const sourceFile = ts.createSourceFile(filePath, '', this.parsedCommandLine.options.target, false, ts.ScriptKind.TS);
-		const source     = this.printer.printList(ts.ListFormat.MultiLine, factory.createNodeArray(nodes), sourceFile);
+		const sourceFile = ts.createSourceFile(filePath, '', PluginConfig.tsConfig.options.target, false, ts.ScriptKind.TS);
+		const source     = TS.printer.printList(ts.ListFormat.MultiLine, factory.createNodeArray(nodes), sourceFile);
 
 		result.didWrite = this.writeFile(filePath, source);
 
@@ -337,8 +259,8 @@ export class Context {
 
 	public static printNode(node: any) {
 		try {
-			const sourceFile = ts.createSourceFile('temp.ts', '', this.instance.parsedCommandLine.options.target, false, ts.ScriptKind.TS);
-			infoLog('Printed node > \n' + this.instance.printer.printNode(ts.EmitHint.Unspecified, node, sourceFile));
+			const sourceFile = ts.createSourceFile('temp.ts', '', PluginConfig.tsConfig.options.target, false, ts.ScriptKind.TS);
+			infoLog('Printed node > \n' + TS.printer.printNode(ts.EmitHint.Unspecified, node, sourceFile));
 		} catch (error) {
 			errorLog("Failed to print node", error);
 		}
@@ -346,178 +268,3 @@ export class Context {
 }
 
 
-export class StoreMeta {
-	/**
-	 * The absolute path to the store file
-	 */
-	public absFilePath: string;
-	/**
-	 * The relative path of the store file, for ex, if importing in /src/stores/, and our file is at /src/stores/MyStore.ts, this will be MyStore.ts
-	 */
-	public relStoreFilePath: string;
-	/**
-	 * The relative import path from Stores/.generated/StoreLoader.ts to the store location
-	 * @type {string}
-	 */
-	public loaderImportPath: string;
-	/**
-	 * The name of the store file
-	 */
-	public name: string;
-	/**
-	 * The name of the class that extends Store
-	 */
-	public className?: string;
-	/**
-	 * This will hold the name of our store export `export const store = new MyStore();`
-	 */
-	public exportName?: string;
-	/**
-	 * If the dev defined `public static vueBinding = 'x';` in their store, this will hold that value
-	 */
-	public vueBinding?: string;
-
-	public actions: ActionMeta[] = [];
-
-
-	constructor(file: ts.SourceFile, absStoresPath: string) {
-		this.absFilePath      = file.fileName;
-		this.name             = path.basename(file.fileName);
-		this.relStoreFilePath = path.relative(Context.instance.generatedDir.path(), file.fileName);
-
-		this.loaderImportPath = this.relStoreFilePath; // path.relative(file.fileName, Context.instance.generatedDir.path(Context.instance.config.storeLoaderFile));
-	}
-
-	public isValid() {
-		return this.className !== undefined && this.exportName !== undefined;
-	}
-
-	public finalize(): this {
-		this.formatVueBinding();
-
-		return this;
-	}
-
-	private formatVueBinding(): void {
-		if (this.vueBinding) {
-			return;
-		}
-
-		this.vueBinding = formatVueBindingName(this.vueBinding, this.className);
-	}
-
-	public metaObject(includeImport: boolean = true) {
-		return {
-			className  : this.className,
-			importPath : this.loaderImportPath,
-			exportName : this.exportName,
-			vueBinding : this.vueBinding,
-			actions    : JSON.parse(JSON.stringify(this.actions)),
-			module     : unwrappableNode(createLazyImportGlobNode(this.loaderImportPath))
-		};
-	}
-}
-
-class ActionMeta {
-
-	public name: string;
-	public params = [];
-	private method: ts.MethodDeclaration;
-	private signature: ts.Signature;
-
-	constructor(method: ts.MethodDeclaration, name: string) {
-		this.method = method;
-		this.name   = name;
-
-		this.signature = Context.instance.typeChecker.getSignatureFromDeclaration(this.method);
-
-		for (let parameter of this.signature.parameters) {
-			const ptype = Context.instance.typeChecker.typeToString(Context.instance.typeChecker.getTypeAtLocation(parameter.valueDeclaration));
-
-			let defaultValue = undefined;
-			if (ts.isParameter(parameter.valueDeclaration)) {
-				if (parameter.valueDeclaration.initializer) {
-					defaultValue = parameter.valueDeclaration.initializer.getText();
-				}
-			}
-
-			this.params.push({
-				name : parameter.name,
-				type : ptype,
-				defaultValue,
-			});
-		}
-	}
-
-	toJSON() {
-		return {
-			name   : this.name,
-			params : this.params
-		};
-	}
-
-}
-
-function createVueDtsFile(stores: StoreMeta[]): ts.Node[] {
-	/**
-	 * This code will generate the following:
-	 *
-	 * declare module "@vue/runtime-core" {
-	 *   import {storeExportName} from "./StoreName";
-	 * 	 interface ComponentCustomProperties {
-	 * 		$storeVueBinding: typeof storeExportName;
-	 * 	 }
-	 * }
-	 *
-	 * export {};
-	 */
-
-	/**
-	 * This will generate:
-	 * $storeVueBinding: typeof storeExportName;
-	 */
-	const componentProperties = stores.map(store => factory.createPropertySignature(
-		undefined,
-		factory.createIdentifier(store.vueBinding),
-		undefined,
-		factory.createTypeQueryNode(factory.createIdentifier(store.exportName), undefined)
-	));
-
-	/**
-	 * This will generate our imports:
-	 * import {storeExportName} from "./StoreName";
-	 */
-	const storeImports = stores.map(
-		store => createRelativeImportNode([store.exportName], store.relStoreFilePath)
-	);
-
-	/**
-	 * This will generate the main declare module/interface block
-	 */
-	const declareModuleBlock = factory.createModuleDeclaration(
-		[factory.createModifier(ts.SyntaxKind.DeclareKeyword)],
-		factory.createStringLiteral("@vue/runtime-core"),
-		factory.createModuleBlock([
-			...storeImports,
-			factory.createInterfaceDeclaration(
-				undefined,
-				factory.createIdentifier("ComponentCustomProperties"),
-				undefined,
-				undefined,
-				componentProperties
-			)
-		]),
-		ts.NodeFlags.ExportContext /*| ts.NodeFlags.Ambient*/ | ts.NodeFlags.ContextFlags
-	);
-
-	return [
-		declareModuleBlock,
-		factory.createExportDeclaration(
-			undefined,
-			false,
-			factory.createNamedExports([]),
-			undefined,
-			undefined
-		),
-	];
-}

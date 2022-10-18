@@ -1,3 +1,2 @@
-export {ClassStoresPlugin} from './ClassStoresPlugin';
-export {Context, type StoreInfo, StoreMeta} from './Generator';
-export type {AllConfig, FullConfig, defaultPluginConfig, PluginConfig} from './types';
+export {ClassStoresPlugin, default as ClassStores} from './ClassStoresPlugin';
+export type {UserPluginConfig} from './PluginConfig';

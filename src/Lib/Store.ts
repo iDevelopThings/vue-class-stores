@@ -60,11 +60,12 @@ export class BaseStore<TStore, TState> implements BaseStoreImpl<TStore, TState> 
 
 		Object.defineProperty(this, 'state', {value : {}, configurable : true});
 
+		this[ClassStoreSymbol] = this.constructor as unknown as BaseStoreClass<TStore, TState>;
+
 		this.__scope = effectScope(true);
 		this.__scope.run(() => {
 			this.#prepareState(this.__originalState);
 
-			this[ClassStoreSymbol] = this.constructor as unknown as BaseStoreClass<TStore, TState>;
 
 			this.__descriptors = getDescriptorsGrouped(this, InternalStoreKeys);
 

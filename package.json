@@ -26,6 +26,7 @@
   },
   "scripts": {
     "dev": "vite",
+    "dev:generator": "DEBUG_MODE=true vite",
     "build": "tsc && vite build",
     "dist": "node build.js",
     "preview": "vite preview",

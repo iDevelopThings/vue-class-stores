@@ -1,5 +1,5 @@
 import ts from "typescript";
-import {StoreMeta} from "../Generator";
+import {StoreMeta} from "../Meta/StoreMeta";
 import {createImportNode, formatImportString} from "./Imports";
 import {createConstVariableNode} from "./Nodes";
 
