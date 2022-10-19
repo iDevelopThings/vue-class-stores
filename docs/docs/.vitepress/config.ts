@@ -43,13 +43,30 @@ const config: Partial<SiteData<ThemeConfig>> = {
                         ]
                     },
                     {
-                        text: 'Getters',
-                        link: '/core-concepts/getters',
+                        text: 'Getters/Setters',
+                        link: '/core-concepts/getters-and-setters',
                         collapsible: true,
                         collapsed: true,
                         items: [
-                            {text: 'Defining a getter', link: '/core-concepts/getters#defining-a-getter'},
-                            {text: 'Computed getters', link: '/core-concepts/getters#computed-getters'},
+                            {
+                                text: 'Getters',
+                                link: '/core-concepts/getters-and-setters#getters',
+                                items: [
+                                    {text: 'Defining a getter', link: '/core-concepts/getters-and-setters#defining-a-getter'},
+                                    {text: 'Computed getters', link: '/core-concepts/getters-and-setters#computed-getters'},
+                                ]
+                            },
+                            {
+                                text: 'Setters',
+                                link: '/core-concepts/getters-and-setters#setters',
+                                items: [
+                                    {text: 'Defining a setter', link: '/core-concepts/getters-and-setters#defining-a-setter'},
+                                ]
+                            },
+                            {
+                                text: 'Computed Writables',
+                                link: '/core-concepts/getters-and-setters#computed-writables',
+                            }
                         ]
                     },
                     {
