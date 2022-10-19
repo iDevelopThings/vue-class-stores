@@ -1,0 +1,18 @@
+on:
+ push:
+   branches: 
+   - main
+   
+   
+jobs:
+  changelogs:
+    runs-on: ubuntu-latest
+    name: Changelog generator
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v2
+      - name: Generate  
+        uses: tj-actions/github-changelog-generator@v1.15
+
+    
