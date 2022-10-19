@@ -32,9 +32,11 @@
 			<button @click="$newYeet.increment()">
 				Increment
 			</button>
-			<button @click="yeetStore.increment()">
-				Increment Imported
+
+			<button @click="yeetStore.counter++">
+				Increment via computed setter
 			</button>
+
 			<button
 				@click="$newYeet.$patch({counter : $newYeet.$counter + 1, inputValue: 'Testing: '+$newYeet.$counter})"
 			>

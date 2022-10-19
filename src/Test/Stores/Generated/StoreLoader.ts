@@ -1,138 +1,194 @@
-import { StoreManager } from "@idevelopthings/vue-class-stores/vue";
-import { type App } from "vue";
-export const stores = [{
-        className: "MyTestStore",
-        importPath: "../TestingStore.ts",
-        exportName: "myTestStore",
-        vueBinding: "$myTest",
+import { StoreManager, StoreMetaData, StoreMetaActionData, StoreMetaGetterSetterData } from "@idevelopthings/vue-class-stores/vue";
+export const stores = [new StoreMetaData({
+        actions: {
+            storeFunction: new StoreMetaActionData({
+                n: "storeFunction",
+                p: [],
+                d: [],
+                h: undefined
+            }),
+            errorFunction: new StoreMetaActionData({
+                n: "errorFunction",
+                p: [],
+                d: [],
+                h: undefined
+            }),
+            storeFunctionWithArgs: new StoreMetaActionData({
+                n: "storeFunctionWithArgs",
+                p: [{
+                        n: "x",
+                        t: "number",
+                        dv: undefined
+                    }, {
+                        n: "y",
+                        t: "number",
+                        dv: "10"
+                    }, {
+                        n: "z",
+                        t: "number",
+                        dv: "20"
+                    }],
+                d: [],
+                h: undefined
+            }),
+            increment: new StoreMetaActionData({
+                n: "increment",
+                p: [],
+                d: [],
+                h: undefined
+            })
+        },
+        lifeCycleHandlers: {},
         stateKeys: ["someValue", "counter", "nested"],
-        getters: [{
+        getters: {
+            storeGetter: new StoreMetaGetterSetterData("getter", {
                 n: "storeGetter",
                 c: false
-            }, {
+            }),
+            someValue: new StoreMetaGetterSetterData("getter", {
                 n: "someValue",
                 c: false
-            }, {
+            }),
+            counter: new StoreMetaGetterSetterData("getter", {
                 n: "counter",
                 c: false
-            }],
+            })
+        },
+        setters: {},
+        store: {
+            className: "MyTestStore",
+            exportName: "myTestStore",
+            vueBinding: "$myTest",
+            module: () => import.meta.glob("../TestingStore.ts", { eager: true })
+        }
+    }), new StoreMetaData({
+        actions: {},
         lifeCycleHandlers: {},
-        actions: [{
-                name: "storeFunction",
-                params: []
-            }, {
-                name: "errorFunction",
-                params: []
-            }, {
-                name: "storeFunctionWithArgs",
-                params: [{
-                        name: "x",
-                        type: "number"
-                    }, {
-                        name: "y",
-                        type: "number",
-                        defaultValue: "10"
-                    }, {
-                        name: "z",
-                        type: "number",
-                        defaultValue: "20"
-                    }]
-            }, {
-                name: "increment",
-                params: []
-            }],
-        module: () => import.meta.glob("../TestingStore.ts", { eager: true })
-    }, {
-        className: "UserStore",
-        importPath: "../UserStore.ts",
-        exportName: "userStore",
-        vueBinding: "$user",
         stateKeys: ["email", "boards"],
-        getters: [{
+        getters: {
+            email: new StoreMetaGetterSetterData("getter", {
                 n: "email",
                 c: true
-            }],
-        lifeCycleHandlers: {},
-        actions: [],
-        module: () => import.meta.glob("../UserStore.ts", { eager: true })
-    }, {
-        className: "NewYeetStore",
-        importPath: "../YeetStore.ts",
-        exportName: "yeetStore",
-        vueBinding: "$newYeet",
-        stateKeys: ["counter", "inputValue", "banner"],
-        getters: [{
-                n: "counterRef",
-                c: false
-            }, {
-                n: "counter",
-                c: true
-            }, {
-                n: "newCounter",
-                c: false
-            }, {
-                n: "inputValueRef",
-                c: false
-            }, {
-                n: "inputValue",
-                c: false
-            }, {
-                n: "banner",
-                c: false
-            }],
+            })
+        },
+        setters: {},
+        store: {
+            className: "UserStore",
+            exportName: "userStore",
+            vueBinding: "$user",
+            module: () => import.meta.glob("../UserStore.ts", { eager: true })
+        }
+    }), new StoreMetaData({
+        actions: {
+            increment: new StoreMetaActionData({
+                n: "increment",
+                p: [],
+                d: [],
+                h: undefined
+            }),
+            incrementRef: new StoreMetaActionData({
+                n: "incrementRef",
+                p: [],
+                d: [],
+                h: undefined
+            }),
+            setNewMessage: new StoreMetaActionData({
+                n: "setNewMessage",
+                p: [{
+                        n: "message",
+                        t: "string",
+                        dv: undefined
+                    }],
+                d: [],
+                h: undefined
+            }),
+            removeBanner: new StoreMetaActionData({
+                n: "removeBanner",
+                p: [],
+                d: [],
+                h: undefined
+            }),
+            myTestFunc: new StoreMetaActionData({
+                n: "myTestFunc",
+                p: [{
+                        n: "message",
+                        t: "string",
+                        dv: undefined
+                    }],
+                d: [],
+                h: undefined
+            }),
+            errorFunc: new StoreMetaActionData({
+                n: "errorFunc",
+                p: [],
+                d: [],
+                h: undefined
+            }),
+            promiseFunc: new StoreMetaActionData({
+                n: "promiseFunc",
+                p: [{
+                        n: "message",
+                        t: "string",
+                        dv: undefined
+                    }],
+                d: [],
+                h: undefined
+            }),
+            doThing: new StoreMetaActionData({
+                n: "doThing",
+                p: [],
+                d: [],
+                h: undefined
+            }),
+            doSomething: new StoreMetaActionData({
+                n: "doSomething",
+                p: [],
+                d: [],
+                h: undefined
+            })
+        },
         lifeCycleHandlers: {
             beforeAll: "BeforeAll",
             afterAll: "AfterAll",
             onInit: "OnInit"
         },
-        actions: [{
-                name: "increment",
-                params: []
-            }, {
-                name: "incrementRef",
-                params: []
-            }, {
-                name: "setNewMessage",
-                params: [{
-                        name: "message",
-                        type: "string"
-                    }]
-            }, {
-                name: "removeBanner",
-                params: []
-            }, {
-                name: "myTestFunc",
-                params: [{
-                        name: "message",
-                        type: "string"
-                    }]
-            }, {
-                name: "errorFunc",
-                params: []
-            }, {
-                name: "promiseFunc",
-                params: [{
-                        name: "message",
-                        type: "string"
-                    }]
-            }, {
-                name: "doThing",
-                params: []
-            }, {
-                name: "doSomething",
-                params: []
-            }, {
-                name: "beforeAll",
-                params: [],
-                lifeCycleEventHandler: "BeforeAll"
-            }, {
-                name: "afterAll",
-                params: [],
-                lifeCycleEventHandler: "AfterAll"
-            }, {
-                name: "onInit",
-                params: [],
-                lifeCycleEventHandler: "OnInit"
-            }],
-        module: () => import.meta.glob("../YeetStore.ts", { eager: true })
-    }];
+        stateKeys: ["counter", "inputValue", "banner"],
+        getters: {
+            counterRef: new StoreMetaGetterSetterData("getter", {
+                n: "counterRef",
+                c: false
+            }),
+            counter: new StoreMetaGetterSetterData("getter", {
+                n: "counter",
+                c: true
+            }),
+            newCounter: new StoreMetaGetterSetterData("getter", {
+                n: "newCounter",
+                c: false
+            }),
+            inputValueRef: new StoreMetaGetterSetterData("getter", {
+                n: "inputValueRef",
+                c: false
+            }),
+            inputValue: new StoreMetaGetterSetterData("getter", {
+                n: "inputValue",
+                c: false
+            }),
+            banner: new StoreMetaGetterSetterData("getter", {
+                n: "banner",
+                c: false
+            })
+        },
+        setters: {
+            counter: new StoreMetaGetterSetterData("setter", {
+                n: "counter",
+                c: true
+            })
+        },
+        store: {
+            className: "NewYeetStore",
+            exportName: "yeetStore",
+            vueBinding: "$newYeet",
+            module: () => import.meta.glob("../YeetStore.ts", { eager: true })
+        }
+    })];

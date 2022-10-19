@@ -1,4 +1,5 @@
 import {reflect} from "@idevelopthings/reflect-extensions";
+import {WritableComputedOptions} from "@vue/reactivity";
 import {klona} from "klona";
 import get from 'lodash.get';
 import set from 'lodash.set';
@@ -8,24 +9,21 @@ import {LifeCycleEvent} from "../Common/LifeCycle";
 import DevTools from "../DevTools/DevTools";
 import type {Path, PathValue} from "./DotPath";
 import {Logger} from "./Logger";
+import {type StoreMetaData} from "./Meta/StoreMetaData";
+import {StoreMetaGetterSetterData} from "./Meta/StoreMetaGetterSetterData";
 import type {BaseStoreClass, BaseStoreImpl, CustomWatchOptions, PatchOperationFunction, PatchOperationObject, StoreAction, StoreActionWithSubscriptions, WatchFunction, WatchHandler} from "./StoreTypes";
 import {ClassStoreSymbol, getDescriptorsGrouped, makeReactive} from "./StoreUtils";
-import type {LifeCycleHooks, StoreActionsList, StoreExtensionDefinitions, StoreGettersList, StoreMeta, StoreMetaGetter} from "./Types";
+import {StoreGetterComputedInfo, StoreGetterInfo, StoreGetterRegularInfo} from "./Types";
+import type {LifeCycleHooks, StoreActionsList, StoreExtensionDefinitions, StoreGettersList, HotReloadChanges, StoreSettersList, StoreType} from "./Types";
 
-type HotReloadChange<T> = { added: T, removed: T };
-type HotReloadChanges = {
-	actions: HotReloadChange<StoreMeta['actions']>
-	getters: HotReloadChange<StoreMeta['getters']>
-	state: HotReloadChange<StoreMeta['stateKeys']>
-	hasChanges(): boolean;
-};
 
 export class BaseStore<TStore, TState> implements BaseStoreImpl<TStore, TState> {
 	[ClassStoreSymbol] = null;
 
 	private __scope: EffectScope;
-	private __storeMeta: StoreMeta;
+	private __storeMeta: StoreMetaData;
 	private __getters: StoreGettersList      = {};
+	private __setters: StoreSettersList      = {};
 	private __actions: StoreActionsList      = {};
 	private __lifecycleHooks: LifeCycleHooks = {
 		AfterAll  : () => {},
@@ -206,15 +204,15 @@ export class BaseStore<TStore, TState> implements BaseStoreImpl<TStore, TState> 
 	 * @private
 	 */
 	#defineGetters() {
-		for (let getter of this.__storeMeta.getters) {
+		for (let [key, getter] of this.__storeMeta.getters) {
 			this.#defineGetter(getter);
 		}
 	}
 
-	#defineGetter(getter: StoreMetaGetter, getterFunc?: (() => any)) {
-		const getterDescriptor = Reflect.getOwnPropertyDescriptor(this.constructor.prototype, getter.n);
+	#defineGetter(getter: StoreMetaGetterSetterData, getterFunc?: (() => any), setterFunc?: ((value) => any)) {
+		const getterDescriptor = Reflect.getOwnPropertyDescriptor(this.constructor.prototype, getter.name);
 		if (!getterDescriptor && !getterFunc) {
-			Logger.label('Store').warn(`Getter descriptor "${getter.n}" could not be found on: `, this.constructor.name);
+			Logger.label('Store').warn(`Getter descriptor "${getter.name}" could not be found on: `, this.constructor.name);
 			return;
 		}
 
@@ -222,20 +220,102 @@ export class BaseStore<TStore, TState> implements BaseStoreImpl<TStore, TState> 
 			getterFunc = getterDescriptor.get.bind(this);
 		}
 
-		this.__getters[getter.n] = {
-			type  : getter.c ? 'computed' : 'function',
-			value : (getter.c ? computed(getterFunc) : getterFunc) as any
+		const baseGetter: StoreGetterComputedInfo = {
+			type   : getter.isComputed ? 'computed' : 'function' as any,
+			value  : getterFunc as any,
+			getter : getterFunc as any,
 		};
 
-		Object.defineProperty((this as any), getter.n, {
+		const descriptor: PropertyDescriptor = {
 			configurable : getterDescriptor?.configurable || true,
 			enumerable   : getterDescriptor?.enumerable || true,
 			get          : () => {
-				const getterInfo = this.__getters[getter.n];
+				// We'll assume our base descriptor is just a regular getter
+				return (this.__getters[getter.name] as StoreGetterRegularInfo).value();
+			},
+		};
 
-				return getterInfo.type === 'computed'
-					? getterInfo.value.value
-					: getterInfo.value();
+		// If our getter is computed, we need to check to see if there is a corresponding setter
+		// If there is, this setter becomes a writable computed property instead
+		if (getter.isComputed) {
+			const setter                                              = this.__storeMeta.setters.get(getter.name);
+			const computedOpts: Partial<WritableComputedOptions<any>> = {
+				get : () => {
+					return (this.__getters[getter.name] as StoreGetterComputedInfo).getter();
+				}
+			};
+
+			if (setter) {
+				const setterDescriptor = Reflect.getOwnPropertyDescriptor(this.constructor.prototype, setter.name);
+				if (!setterDescriptor && !setterFunc) {
+					Logger.label('Store').warn(`Setter descriptor "${getter.name}" could not be found on: `, this.constructor.name);
+					return;
+				}
+
+				if (!setterFunc) {
+					setterFunc = setterDescriptor.set.bind(this);
+				}
+
+				baseGetter.setter = setterFunc as any;
+
+				// Use the setter function for the computed writable
+				computedOpts.set = (value) => {
+					return (this.__getters[getter.name] as StoreGetterComputedInfo).setter(value);
+				};
+
+				// Use the above computed writable for the descriptor setter
+				descriptor.set = (value) => {
+					(this.__getters[getter.name] as StoreGetterComputedInfo).value.value = value;
+				};
+
+				// Overwrite the descriptor getter to use the computed writable
+				descriptor.get = () => {
+					return (this.__getters[getter.name] as StoreGetterComputedInfo).value.value;
+				};
+			}
+
+			baseGetter.value = computed(computedOpts as WritableComputedOptions<any>);
+		}
+
+		this.__getters[getter.name] = baseGetter;
+
+		// TODO: Think of better way to clean up this code... 🤮
+
+		Object.defineProperty((this as any), getter.name, descriptor);
+	}
+
+	/**
+	 * For all of the setters located by the generator, we'll override the original setter
+	 */
+	#defineSetters() {
+		for (let [key, setter] of this.__storeMeta.setters) {
+			// If our setter is marked as computed, it'll be handled by the getter
+			// In this case, the getter will be created as a computed writable instead
+			if (setter.isComputed) {
+				continue;
+			}
+			this.#defineSetter(setter);
+		}
+	}
+
+	#defineSetter(setter: StoreMetaGetterSetterData, setterFunc?: (() => any)) {
+		const setterDescriptor = Reflect.getOwnPropertyDescriptor(this.constructor.prototype, setter.name);
+		if (!setterDescriptor && !setterFunc) {
+			Logger.label('Store').warn(`Setter descriptor "${setter.name}" could not be found on: `, this.constructor.name);
+			return;
+		}
+
+		if (!setterFunc) {
+			setterFunc = setterDescriptor.set.bind(this);
+		}
+
+		this.__setters[setter.name] = {type : 'function', value : setterFunc};
+
+		Object.defineProperty((this as any), setter.name, {
+			configurable : setterDescriptor?.configurable || true,
+			enumerable   : setterDescriptor?.enumerable || true,
+			set          : (value) => {
+				this.__setters[setter.name].value(value);
 			},
 		});
 	}
@@ -246,7 +326,7 @@ export class BaseStore<TStore, TState> implements BaseStoreImpl<TStore, TState> 
 	 * @private
 	 */
 	#defineActions() {
-		for (let action of this.__storeMeta.actions) {
+		for (let [key, action] of this.__storeMeta.actions) {
 			const actionDescriptor = Reflect.getOwnPropertyDescriptor(this.constructor.prototype, action.name);
 			if (!actionDescriptor) {
 				Logger.label('Store').warn(`Action descriptor "${action.name}" could not be found on: `, this.constructor.name);
@@ -493,7 +573,10 @@ export class BaseStore<TStore, TState> implements BaseStoreImpl<TStore, TState> 
 			}
 
 			// Define the new getter with a custom function
-			this.#defineGetter({n : key, c : false}, this.__extensions.getters[key]);
+			this.#defineGetter(
+				new StoreMetaGetterSetterData("getter", {n : key, c : false}),
+				this.__extensions.getters[key]
+			);
 		}
 
 		for (let [key, value] of Object.entries(descriptors.actions)) {
@@ -535,52 +618,16 @@ export class BaseStore<TStore, TState> implements BaseStoreImpl<TStore, TState> 
 		return handler();
 	}
 
-	public __checkForHotReloadChanges(newMeta: StoreMeta): HotReloadChanges {
-		// First, we'll compare our new store meta with the old version
-
-		const currentMeta = this.__storeMeta;
-
-		// We'll check for getters being added or removed
-		// We'll check for actions being added or removed
-		// We'll check for state properties being added or removed
-		return {
-			actions : {
-				added   : newMeta.actions.filter((v) => !currentMeta.actions.some(a => a.name === v.name)),
-				removed : currentMeta.actions.filter((v) => !newMeta.actions.some(a => a.name === v.name)),
-			},
-			getters : {
-				added   : newMeta.getters.filter((v) => !currentMeta.getters.some(g => g.n === v.n)),
-				removed : currentMeta.getters.filter((v) => !newMeta.getters.some(g => g.n === v.n)),
-			},
-			state   : {
-				added   : newMeta.stateKeys.filter((v) => !currentMeta.stateKeys.includes(v)),
-				removed : currentMeta.stateKeys.filter((v) => !newMeta.stateKeys.includes(v)),
-			},
-			hasChanges(): boolean {
-				if (this.actions.added.length > 0 || this.actions.removed.length > 0) {
-					return true;
-				}
-
-				if (this.getters.added.length > 0 || this.getters.removed.length > 0) {
-					return true;
-				}
-
-				if (this.state.added.length > 0 || this.state.removed.length > 0) {
-					return true;
-				}
-
-				return false;
-			}
-		};
-	}
-
-	public __processHotReloadChanges(changes: HotReloadChanges, newModule: any, newMeta: StoreMeta) {
+	__processHotReloadChanges(changes: HotReloadChanges, newStore: { instance: StoreType, meta: StoreMetaData }) {
 		if (!changes.hasChanges()) {
 			return false;
 		}
 
-		// Once we know what has been modified, we'll then overwrite the existing store meta with the new one
-		this.__storeMeta = newMeta;
+		const curCtor      = this.constructor;
+		const curClassName = this.constructor.name;
+
+		const newModule = newStore.instance;
+		const newCtor   = newStore.instance.constructor;
 
 		// We'll then apply the changes to the store instance
 
@@ -590,9 +637,9 @@ export class BaseStore<TStore, TState> implements BaseStoreImpl<TStore, TState> 
 		if (changes.actions.added.length || changes.actions.removed.length) {
 			for (let action of changes.actions.added) {
 				// Add the new action to the store first
-				const actionDescriptor = Reflect.getOwnPropertyDescriptor(newModule.constructor.prototype, action.name);
+				const actionDescriptor = Reflect.getOwnPropertyDescriptor(newCtor.prototype, action.name);
 				if (!actionDescriptor?.value) {
-					Logger.label('Store HMR').warn(`Cannot add Action "${action.name}" to store: "${this.constructor.name}", the action function is not defined. Skipping...`);
+					Logger.label('Store HMR').warn(`Cannot add Action "${action.name}" to store: "${curClassName}", the action function is not defined. Skipping...`);
 					continue;
 				}
 
@@ -601,7 +648,7 @@ export class BaseStore<TStore, TState> implements BaseStoreImpl<TStore, TState> 
 				Object.defineProperty(this, action.name, actionDescriptor);
 				this.#defineAction(action.name);
 
-				Logger.label('Store HMR').success(`Added action "${action.name}" to store: "${this.constructor.name}"`);
+				Logger.label('Store HMR').success(`Added action "${action.name}" to store: "${curClassName}"`);
 			}
 
 			for (let action of changes.actions.removed) {
@@ -614,7 +661,7 @@ export class BaseStore<TStore, TState> implements BaseStoreImpl<TStore, TState> 
 					Reflect.deleteProperty(this.__actions, action.name);
 				}
 
-				Logger.label('Store HMR').success(`Removed action "${action.name}" from store: "${this.constructor.name}"`);
+				Logger.label('Store HMR').success(`Removed action "${action.name}" from store: "${curClassName}"`);
 			}
 		}
 
@@ -624,33 +671,33 @@ export class BaseStore<TStore, TState> implements BaseStoreImpl<TStore, TState> 
 		if (changes.getters.added.length || changes.getters.removed.length) {
 
 			for (let getter of changes.getters.added) {
-				const newGetter = Reflect.getOwnPropertyDescriptor(newModule.constructor.prototype, getter.n);
+				const newGetter = Reflect.getOwnPropertyDescriptor(newCtor.prototype, getter.name);
 				if (!newGetter?.get) {
-					Logger.label('Store HMR').warn(`Cannot add Getter "${getter.n}" extension to store via hot reload: "${this.constructor.name}", the getter function is not defined. Skipping...`);
+					Logger.label('Store HMR').warn(`Cannot add Getter "${getter.name}" extension to store via hot reload: "${curClassName}", the getter function is not defined. Skipping...`);
 					continue;
 				}
 
 				newGetter.get = newGetter.get.bind(this);
 
 				// Add the new getter to the store first
-				Object.defineProperty(this.constructor.prototype, getter.n, newGetter);
+				Object.defineProperty(this.constructor.prototype, getter.name, newGetter);
 
 				this.#defineGetter(getter);
 
-				Logger.label('Store HMR').success(`Added Getter "${getter.n}" to store: "${this.constructor.name}"`);
+				Logger.label('Store HMR').success(`Added Getter "${getter.name}" to store: "${curClassName}"`);
 			}
 
 			for (let getter of changes.getters.removed) {
 				// Remove the getter from the store
-				if (Reflect.has(this.constructor.prototype, getter.n)) {
-					Reflect.deleteProperty(this.constructor.prototype, getter.n);
+				if (Reflect.has(this.constructor.prototype, getter.name)) {
+					Reflect.deleteProperty(this.constructor.prototype, getter.name);
 				}
 
-				if (Reflect.has(this.__getters, getter.n)) {
-					Reflect.deleteProperty(this.__getters, getter.n);
+				if (Reflect.has(this.__getters, getter.name)) {
+					Reflect.deleteProperty(this.__getters, getter.name);
 				}
 
-				Logger.label('Store HMR').success(`Removed getter "${getter.n}" from store: "${this.constructor.name}"`);
+				Logger.label('Store HMR').success(`Removed getter "${getter.name}" from store: "${curClassName}"`);
 			}
 
 		}
@@ -661,18 +708,18 @@ export class BaseStore<TStore, TState> implements BaseStoreImpl<TStore, TState> 
 
 		if (changes.state.added.length || changes.state.removed.length) {
 			// Override the original state with the new one
-			this.__originalState = newModule.state;
+			this.__originalState = (newModule as any).state;
 
 			for (let stateKey of changes.state.added) {
 				// Add the new state key to the store first
 				this.#defineStateProperty(stateKey);
-				Logger.label('Store HMR').success(`Added state property "${stateKey}" to store: "${this.constructor.name}"`);
+				Logger.label('Store HMR').success(`Added state property "${stateKey}" to store: "${curClassName}"`);
 			}
 
 			for (let stateKey of changes.state.removed) {
 				// Remove the state key from the store
 				this.#removeStateProperty(stateKey);
-				Logger.label('Store HMR').success(`Removed state property "${stateKey}" from store: "${this.constructor.name}"`);
+				Logger.label('Store HMR').success(`Removed state property "${stateKey}" from store: "${curClassName}"`);
 			}
 		}
 

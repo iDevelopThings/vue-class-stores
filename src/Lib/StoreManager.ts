@@ -2,7 +2,8 @@ import {App} from "@vue/runtime-core";
 import {LifeCycleEvent} from "../Common/LifeCycle";
 import {DevTools} from "./../DevTools";
 import {Logger} from "./Logger";
-import type {LifeCycleHooks, StoreLoaderModule, StoreMeta, StoreType} from "./Types";
+import type {StoreMetaData} from "./Meta/StoreMetaData";
+import type {StoreLoaderModule, StoreType} from "./Types";
 
 
 export class StoreManagerInstance {
@@ -12,25 +13,21 @@ export class StoreManagerInstance {
 
 	/**
 	 * Holds store Class Name -> Store Instance
-	 * @type {{[p: string]: StoreType}}
 	 */
 	public stores: { [key: string]: StoreType } = {};
 
 	/**
 	 * Holds store Class Name -> Store Module
-	 * @type {{[p: string]: any}}
 	 */
 	public storeModules: { [key: string]: any } = {};
 
 	/**
 	 * Holds store Class Name -> Store Meta
-	 * @type {{[p: string]: StoreMeta}}
 	 */
-	public storeMeta: { [key: string]: StoreMeta } = {};
+	public storeMeta: { [key: string]: StoreMetaData } = {};
 
 	/**
 	 * Holds a reference of Binding -> Class Name for quick lookup
-	 * @type {{[p: string]: string}}
 	 */
 	public storeBindingToClassName: { [key: string]: string } = {};
 
@@ -93,10 +90,10 @@ export class StoreManagerInstance {
 	}
 
 	private loadStoresFromLoader(storeLoader: StoreLoaderModule): void {
-
 		const beforeAllHandlers = [];
 		const afterAllHandlers  = [];
 
+		// Run all of the stores `pre init` stages and get their `beforeAll` and `afterAll` handlers
 		for (let store of storeLoader.stores) {
 			const instance = this.prepareStore(store);
 			instance.__preBooting();
@@ -114,37 +111,35 @@ export class StoreManagerInstance {
 		this.callLifeCycleHandlers(afterAllHandlers, LifeCycleEvent.AfterAll);
 	}
 
-	private prepareStore(meta: StoreMeta) {
-		const storeModuleGlob = meta.module();
-		if (!storeModuleGlob) {
-			throw new Error('Store lazy import; module is not defined for file: ' + meta.importPath);
-		}
-		const storeModule = Object.values(storeModuleGlob)[0];
-		if (!storeModule) {
-			throw new Error('Store module is not defined for file: ' + meta.importPath);
-		}
-
-		const store       = storeModule[meta.exportName] as StoreType;
+	/**
+	 * Run the stores `pre init` stage
+	 * This is where it's imported, the binding/meta is setup and
+	 * the store is registered on our store manager.
+	 */
+	private prepareStore(meta: StoreMetaData) {
+		const store       = meta.getStoreExport();
 		store.__storeMeta = meta;
-		store.vueBinding  = meta.vueBinding;
+		store.vueBinding  = meta.store.vueBinding;
 
-		this.storeModules[meta.className]             = storeModule;
-		this.storeMeta[meta.className]                = meta;
-		this.stores[meta.className]                   = store;
-		this.storeBindingToClassName[meta.vueBinding] = meta.className;
+		this.storeModules[meta.store.className]             = meta.getModule();
+		this.storeMeta[meta.store.className]                = meta;
+		this.stores[meta.store.className]                   = store;
+		this.storeBindingToClassName[meta.store.vueBinding] = meta.store.className;
 
 		return store;
 	}
 
+	/**
+	 * Run the stores main `init` stage.
+	 *
+	 * This is where all bindings will be setup and the `init` hook will be called.
+	 */
 	private loadStore(store: StoreType) {
 		store.__bootStore();
 
 		this.app.config.globalProperties[store.vueBinding] = store;
 
 		store.__addExtensions(this.extensions.map(extensionFunc => extensionFunc()));
-
-//		Logger.label('StoreManager').success('Registered store: ', store);
-
 		store.__callHook(LifeCycleEvent.OnInit);
 	}
 
@@ -169,27 +164,23 @@ export class StoreManagerInstance {
 	 * function, it fetches the latest store version....
 	 * Just means we have to process all stores on hot reload :|
 	 */
-	loaderReloaded(storesMeta: StoreMeta[]) {
+	loaderReloaded(storesMeta: StoreMetaData[]) {
 		for (let storeMeta of storesMeta) {
-			this.storeMeta[storeMeta.className] = storeMeta;
+			this.storeMeta[storeMeta.store.className] = storeMeta;
 
-			const storeModuleGlob = storeMeta.module();
-			if (!storeModuleGlob) {
-				throw new Error('Store lazy import; module is not defined for file: ' + storeMeta.importPath);
-			}
-			const storeModule = Object.values(storeModuleGlob)[0];
-			if (!storeModule) {
-				throw new Error('Store module is not defined for file: ' + storeMeta.importPath);
-			}
-			const newStoreInst = storeModule[storeMeta.exportName];
-			if (!newStoreInst) {
-				throw new Error('Store module is not defined for file: ' + storeMeta.importPath);
-			}
+			const curStoreInst = this.stores[storeMeta.store.className];
+			const newStoreInst = storeMeta.getStoreExport();
 
-			const changes = this.stores[storeMeta.className].__checkForHotReloadChanges(storeMeta);
+			const changes = storeMeta.compareChanges(curStoreInst.__storeMeta);
 			if (changes.hasChanges()) {
-				Logger.label('Store HMR').info('Handling HMR for store: ' + storeMeta.className);
-				this.stores[storeMeta.className].__processHotReloadChanges(changes, newStoreInst, storeMeta);
+				curStoreInst.__storeMeta = storeMeta;
+
+				Logger.label('Store HMR').info('Handling HMR for store: ' + storeMeta.store.className);
+
+				curStoreInst.__processHotReloadChanges(changes, {
+					instance : newStoreInst,
+					meta     : storeMeta
+				});
 			}
 		}
 	}

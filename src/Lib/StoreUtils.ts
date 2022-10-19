@@ -1,5 +1,4 @@
 import {isRef, ref} from "vue";
-import {isPlainObject} from "../Common/Object";
 
 export const ClassStoreSymbol = Symbol('ClassStore');
 

@@ -6,3 +6,7 @@ export enum LifeCycleEvent {
 	OnDispose = 'OnDispose',
 	AfterAll  = 'AfterAll',
 }
+
+export function isLifeCycleEvent(name: string): boolean {
+	return Object.values(LifeCycleEvent).includes(name as LifeCycleEvent);
+}

@@ -1,11 +1,14 @@
 import type {WritableComputedRef} from "@vue/reactivity";
 import {LifeCycleEvent} from "../Common/LifeCycle";
+import type {StoreMetaActionData} from "./Meta/StoreMetaActionData";
+import type {StoreMetaData} from "./Meta/StoreMetaData";
+import type {StoreMetaGetterSetterData} from "./Meta/StoreMetaGetterSetterData";
 import type {BaseStore} from "./Store";
 
 
 interface BaseStorePublic {
 	vueBinding: string;
-	__storeMeta: StoreMeta;
+	__storeMeta: StoreMetaData;
 	__getters: { [key: string]: StoreGetterInfo };
 	__actions: { [key: string]: (...args) => any };
 	__extensions: StoreExtensionDefinitions;
@@ -16,16 +19,6 @@ export type StoreType = {
                         } & BaseStorePublic;
 
 
-export type StoreMetaAction = { name: string; params: StoreMetaAction[]; lifeCycleEventHandler: LifeCycleEvent | undefined }
-export type StoreMetaActionParam = { name: string, defaultValue: string, type: string }
-
-export type StoreMetaGetter = {
-	// Name of the getter
-	n: string,
-	// Is the getter a computed property?(marked with @Computed decorator)
-	c: boolean
-};
-
 export type LifeCycleHooks = {
 	[LifeCycleEvent.BeforeAll]?: () => void | PromiseLike<void>;
 	[LifeCycleEvent.OnInit]?: () => void | PromiseLike<void>;
@@ -33,22 +26,25 @@ export type LifeCycleHooks = {
 	[LifeCycleEvent.AfterAll]?: () => void | PromiseLike<void>;
 }
 
-export type StoreMeta = {
+export type StoreMetaInfo = {
 	className: string;
-	importPath: string;
 	exportName: string;
 	vueBinding: string;
-	stateKeys: string[];
-	getters: StoreMetaGetter[];
-	actions: StoreMetaAction[];
-	lifeCycleHandlers: { [key: string]: LifeCycleEvent };
 	// Would be something like:
 	// {'SomeStore.ts' : {StoreName : StoreClass, storeExport : Store}}
 	module: () => { [key: string]: { [key: string]: any } };
 }
+export type StoreMeta = {
+	store: StoreMetaInfo;
+	stateKeys: string[];
+	getters: { [key: string]: StoreMetaGetterSetterData };
+	setters: { [key: string]: StoreMetaGetterSetterData };
+	actions: { [key: string]: StoreMetaActionData };
+	lifeCycleHandlers: { [key: string]: LifeCycleEvent | string };
+}
 
 export type StoreLoaderModule = {
-	stores: StoreMeta[];
+	stores: StoreMetaData[];
 }
 
 export enum MutationType {
@@ -60,15 +56,32 @@ export enum MutationType {
 	PatchFunction = 'patch function',
 }
 
-export type StoreGetterComputedInfo = { type: 'computed', value: WritableComputedRef<any> }
-export type StoreGetterRegularInfo = { type: 'function', value: () => any }
-export type StoreGetterInfo = StoreGetterComputedInfo | StoreGetterRegularInfo;
-
 export type StoreExtensionDefinitions = {
 	getters: { [key: string]: () => any },
 	actions: { [key: string]: () => any },
 	properties: { [key: string]: any }
 };
 
+export type StoreGetterComputedInfo = {
+	type: 'computed',
+	value: WritableComputedRef<any>,
+	getter: () => any,
+	setter?: (value: any) => void,
+}
+export type StoreGetterRegularInfo = { type: 'function', value: () => any }
+export type StoreGetterInfo = StoreGetterComputedInfo | StoreGetterRegularInfo;
+export type StoreSetterInfo = { type: 'function', value: (val: any) => void };
+
 export type StoreGettersList = { [key: string]: StoreGetterInfo };
+export type StoreSettersList = { [key: string]: StoreSetterInfo };
 export type StoreActionsList = { [key: string]: (...args) => any };
+
+
+export type HotReloadChange<T> = { added: T, removed: T };
+export type HotReloadChanges = {
+	actions: HotReloadChange<StoreMetaActionData[]>
+	getters: HotReloadChange<StoreMetaGetterSetterData[]>
+	setters: HotReloadChange<StoreMetaGetterSetterData[]>
+	state: HotReloadChange<StoreMeta['stateKeys']>
+	hasChanges(): boolean;
+};

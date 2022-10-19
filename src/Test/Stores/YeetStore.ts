@@ -26,6 +26,9 @@ export class NewYeetStore extends Store<NewYeetStore, INewYeetStore>() {
 		return this.state.counter;
 	}
 
+	set counter(value: number) {
+		this.state.counter = value;
+	}
 
 	get newCounter() { return '';}
 
@@ -86,20 +89,23 @@ export class NewYeetStore extends Store<NewYeetStore, INewYeetStore>() {
 
 	doSomething() {}
 
+
 	@BeforeAll
 	beforeAll() {
-		console.log('hi from: ',this.constructor.name, 'beforeAll');
+		console.log('hi from: ', this.constructor.name, 'beforeAll');
 	}
 
 	@AfterAll
 	afterAll() {
-		console.log('hi from: ',this.constructor.name, 'afterAll');
+		console.log('hi from: ', this.constructor.name, 'afterAll');
 	}
 
 	@OnInit
 	onInit() {
-		console.log('hi from: ',this.constructor.name, 'onInit');
+		console.log('hi from: ', this.constructor.name, 'onInit');
 	}
+
+
 }
 
 export const yeetStore = new NewYeetStore();
