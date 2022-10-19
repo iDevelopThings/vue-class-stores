@@ -1,23 +1,39 @@
 import path from "path";
 import ts from "typescript";
 import {StoreMeta} from "../Meta/StoreMeta";
-import {PluginConfig} from "../PluginConfig";
 import {createImportNode, formatImportString} from "./Imports";
-import {createConstVariableNode} from "./Nodes";
+import {createNodeFromValue, newClassInstance} from "./Object";
 
 const {factory} = ts;
 
 export function createStoreLoaderModule(stores: StoreMeta[]) {
 	const imports = [
-		createImportNode(['StoreManager'], '@idevelopthings/vue-class-stores/vue'),
-		createImportNode(['App'], 'vue', true),
+		createImportNode(['StoreManager', 'StoreMetaData', 'StoreMetaActionData', 'StoreMetaGetterSetterData'], '@idevelopthings/vue-class-stores/vue'),
 	];
+
+	const storeMetaObjects = stores.map(store => {
+		return newClassInstance("StoreMetaData", [createNodeFromValue(store.toMetaObject())]);
+	});
+
+	const storeMetaExport = factory.createVariableStatement(
+		[factory.createModifier(ts.SyntaxKind.ExportKeyword)],
+		factory.createVariableDeclarationList([
+				factory.createVariableDeclaration(
+					factory.createIdentifier("stores"),
+					undefined,
+					undefined,
+					factory.createArrayLiteralExpression(storeMetaObjects, false)
+				)
+			], ts.NodeFlags.Const
+		)
+	);
 
 	return [
 		...imports,
-		createConstVariableNode("stores", stores.map(store => store.metaObject()), false, true),
+		storeMetaExport,
+		//		createConstVariableNode("stores", stores.map(store => store.toMetaObject()), false, true),
 		//		createBootStoresFunction(),
-//		createViteHotAccept(stores)
+		//		createViteHotAccept(stores)
 	];
 
 }

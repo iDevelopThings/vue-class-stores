@@ -1,6 +1,7 @@
 import ts from "typescript";
 import {errorMessages} from "../ErrorMessages";
 import {Linter} from "../Linting";
+import {ProcessingContext} from "../Utils/ProcessingContext";
 import {isPublicOrPrivate, isStatic} from "./Modifiers";
 
 /**
@@ -51,7 +52,7 @@ export function isVueBinding(member: ts.ClassElement): [is: boolean, binding: st
 }
 
 
-export function isStateGetterNode(member: ts.ClassElement, linter: Linter): [is: boolean, obj: ts.ObjectLiteralExpression] {
+export function isStateGetterNode(member: ts.ClassElement): [is: boolean, obj: ts.ObjectLiteralExpression] {
 	const result: [is: boolean, obj: ts.ObjectLiteralExpression] = [false, undefined];
 
 	if (ts.isPropertyDeclaration(member)) return result;
@@ -60,21 +61,21 @@ export function isStateGetterNode(member: ts.ClassElement, linter: Linter): [is:
 
 	// Ensure our state getter is actually a getter
 	if (!ts.isGetAccessor(member)) {
-		linter.error(errorMessages.stateGetter.mustBeGetter(), member);
+		ProcessingContext.linter.error(errorMessages.stateGetter.mustBeGetter(), member);
 
 		return result;
 	}
 
 	// Ensure it's defined as public or private
 	if (!isPublicOrPrivate(member.modifiers)) {
-		linter.error(errorMessages.stateGetter.publicOrPrivate(), member);
+		ProcessingContext.linter.error(errorMessages.stateGetter.publicOrPrivate(), member);
 
 		return result;
 	}
 
 	// Ensure it's not static
 	if (isStatic(member.modifiers)) {
-		linter.error(errorMessages.stateGetter.nonStatic(), member);
+		ProcessingContext.linter.error(errorMessages.stateGetter.nonStatic(), member);
 
 		return result;
 	}
@@ -84,18 +85,18 @@ export function isStateGetterNode(member: ts.ClassElement, linter: Linter): [is:
 
 	const statements = body.statements;
 	if (statements.length !== 1) {
-		linter.error(errorMessages.stateGetter.invalidBody(), member);
+		ProcessingContext.linter.error(errorMessages.stateGetter.invalidBody(), member);
 		return result;
 	}
 
 	const statement = statements[0];
 	if (!ts.isReturnStatement(statement)) {
-		linter.error(errorMessages.stateGetter.invalidBody(), member);
+		ProcessingContext.linter.error(errorMessages.stateGetter.invalidBody(), member);
 		return result;
 	}
 
 	if (!ts.isObjectLiteralExpression(statement.expression)) {
-		linter.error(errorMessages.stateGetter.invalidBody(), member);
+		ProcessingContext.linter.error(errorMessages.stateGetter.invalidBody(), member);
 		return result;
 	}
 

@@ -1,7 +1,14 @@
-import ts from "typescript";
-import {Context} from "../Generator";
+import ts, {Expression} from "typescript";
 
 const {factory} = ts;
+
+export function newClassInstance(name: string, params: Expression[]) {
+	return factory.createNewExpression(
+		factory.createIdentifier(name),
+		undefined,
+		params,
+	);
+}
 
 /**
  * This will convert the object passed to it, to typescript AST nodes so it can be printed.
@@ -45,7 +52,7 @@ export function createNodeFromValue(value: any) {
 		throw new Error("Unknown value type: " + typeof value);
 	}
 
-//	Context.printNode(nodeResult);
+	//	Context.printNode(nodeResult);
 
 	return nodeResult;
 }

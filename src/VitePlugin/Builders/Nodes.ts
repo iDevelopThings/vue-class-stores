@@ -1,6 +1,4 @@
 import ts from 'typescript';
-import {Context} from "../Generator";
-import {infoLog} from "../Logger";
 import {createNodeFromValue} from "./Object";
 
 const {factory} = ts;

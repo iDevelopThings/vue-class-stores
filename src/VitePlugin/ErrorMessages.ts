@@ -1,5 +1,6 @@
-import {createExportName, formatVueBindingName} from "../Common";
+import {createExportName} from "../Common";
 import {colors} from "./Logger";
+import {ProcessingContext} from "./Utils/ProcessingContext";
 
 export class CodeSnippet {
 	constructor(
@@ -53,14 +54,25 @@ export const errorMessages = {
 	},
 
 	lifecycle : {
-		multipleLifeCycleHandlersDefined : (methodName, storeName, currentEvent) => [
-			`"${storeName}.${methodName}" has multiple lifecycle decorators defined, there should only be one.`,
-			`The first will be used.`,
-			new CodeSnippet(
-				`@${currentEvent}\n${methodName}() { ... }`,
-				'For example, your method should look like this:',
-			),
-		]
+		multipleLifeCycleHandlersDefinedForMethod : (methodName: string, currentEvent: string, storeName?: string) => {
+			storeName = storeName || ProcessingContext.store.className;
+
+			return [
+				`"${storeName}.${methodName}" has multiple lifecycle decorators defined, there should only be one.`,
+				`The first will be used.`,
+				new CodeSnippet(
+					`@${currentEvent}\n${methodName}() { ... }`,
+					'For example, your method should look like this:',
+				),
+			];
+		},
+		multipleLifeCycleHandlersDefinedForEvent  : (methodName: string, storeName?: string) => {
+			storeName = storeName || ProcessingContext.store.className;
+
+			return [
+				`Your have defined multiple methods using the same lifecycle decorator: "${storeName}.${methodName}". There should only be one.`,
+			];
+		},
 	}
 
 

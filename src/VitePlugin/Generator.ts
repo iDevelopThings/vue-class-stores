@@ -12,6 +12,7 @@ import {ActionMeta} from "./Meta/ActionMeta";
 import {StoreMeta} from "./Meta/StoreMeta";
 import {PluginConfig} from "./PluginConfig";
 import {TS} from "./TS";
+import {ProcessingContext} from "./Utils/ProcessingContext";
 import {Timed} from "./Utils/Timed";
 
 const {factory} = ts;
@@ -66,6 +67,9 @@ export class Context {
 		this.modules = TS.program.getSourceFiles()
 			.reduce((acc, source) => {
 				if (!PluginConfig.storeFilePaths.includes(source.fileName)) {
+					return acc;
+				}
+				if (source.isDeclarationFile) {
 					return acc;
 				}
 
@@ -145,7 +149,12 @@ export class Context {
 
 		this.stores = [];
 		for (const {module, store} of this.modules) {
+
+			ProcessingContext.setCurrent(module, store);
+
+			Timed.start('generator.processModule');
 			const outStore = this.processModule(module, store);
+			Timed.end('generator.processModule');
 			if (!outStore) continue;
 
 			this.stores.push(outStore.finalize());
@@ -155,7 +164,9 @@ export class Context {
 	}
 
 	writeFiles() {
+		Timed.start('generator.writeFiles');
 		this.writeStoreDeclaration();
+		Timed.end('generator.writeFiles');
 	}
 
 	private writeStoreDeclaration() {
@@ -201,11 +212,6 @@ export class Context {
 	}
 
 	private processModule(module: ts.SourceFile, store: StoreMeta): StoreMeta | undefined {
-
-		const linter = Linting.factory(module);
-
-		let classDeclarationNode: ts.Node = null;
-
 		for (let statement of module.statements) {
 
 			// Search for our `export myStoreName = new MyStore();` statement and extract `myStoreName`
@@ -216,54 +222,68 @@ export class Context {
 
 			// Search for our `export class MyStore extends Store<MyStore, IMyStoreState> {` statement and extract `MyStore`
 			if (!ts.isClassDeclaration(statement)) continue;
-			// Used for export linting
-			classDeclarationNode = statement;
 
 			// Ensure our class extends Store
 			if (!extendsStore(statement)) continue;
 			if (!ts.isIdentifier(statement.name)) continue;
 
-			// Store the class name for our store
-			store.className = statement.name.text;
-
-			// Now we'll process the members of the class
-			// We need to extract Action meta & the vue binding(if one is defined)
-			for (let member of statement.members) {
-
-				// Now we have to look for the `public static vueBinding = 'x';`
-				// statement and pull out it's value.
-				const [isBinding, vueBinding] = isVueBinding(member);
-				if (isBinding) {
-					store.vueBinding = vueBinding;
-				}
-
-				// Check if our member is an action, if it is we'll store some meta for it
-				if (ts.isMethodDeclaration(member) && ts.isIdentifier(member.name)) {
-					store.actions.push(new ActionMeta(member, linter, store));
-				}
-
-				const [isStateGetter, stateObj] = isStateGetterNode(member, linter);
-				if (isStateGetter && !store.stateObj) {
-					store.setStateObject(stateObj);
-				}
-
-				if (ts.isGetAccessor(member) && ts.isIdentifier(member.name)) {
-					store.addGetter(member);
-				}
-			}
+			ProcessingContext.processingStoreClass(statement, () => {
+				this.processClass(statement as ts.ClassDeclaration, store);
+			});
 		}
 
-		if (!store.exportName) {
-			linter.error(errorMessages.store.missingExport(store.className), classDeclarationNode);
-		}
-
-		if (!store.stateObj) {
-			linter.error(errorMessages.stateGetter.missingStateGetter(store.className), classDeclarationNode);
-		}
-
-		linter.merge();
+		ProcessingContext.validate();
 
 		return store.isValid() ? store : undefined;
+	}
+
+	private processClass(statement: ts.ClassDeclaration, store: StoreMeta): boolean {
+
+		// Store the class name for our store
+		store.className = statement.name.text;
+
+		// Now we'll process the members of the class
+		// We need to extract Action meta & the vue binding(if one is defined)
+		for (let member of statement.members) {
+
+			// Now we have to look for the `public static vueBinding = 'x';`
+			// statement and pull out it's value.
+			const [isBinding, vueBinding] = isVueBinding(member);
+			if (isBinding) {
+				store.vueBinding = vueBinding;
+				continue;
+			}
+
+			// Check if our member is an action, if it is we'll store some meta for it
+			if (ts.isMethodDeclaration(member) && ts.isIdentifier(member.name)) {
+				const action = new ActionMeta(member as ts.MethodDeclaration);
+				ProcessingContext.processingAction(action, () => {
+					store.addAction(action);
+				});
+
+				continue;
+			}
+
+			const [isStateGetter, stateObj] = isStateGetterNode(member);
+			if (isStateGetter && !store.stateObj) {
+				store.setStateObject(stateObj);
+
+				continue;
+			}
+
+			if (ts.isGetAccessor(member) && ts.isIdentifier(member.name)) {
+				store.addGetter(member);
+				continue;
+			}
+
+			if (ts.isSetAccessor(member) && ts.isIdentifier(member.name)) {
+				store.addSetter(member);
+				continue;
+			}
+
+		}
+
+		return true;
 	}
 
 	public isStoreFile(path: string): boolean {
@@ -302,6 +322,8 @@ export class Context {
 			errorLog("Failed to print node", error);
 		}
 	}
+
+
 }
 
 
