@@ -107,6 +107,36 @@ const config: Partial<SiteData<ThemeConfig>> = {
                 ]
             },
             {
+                text: 'Events',
+                collapsible: true,
+                collapsed: false,
+                items: [
+                    {
+                        text: 'Event Bus',
+                        link: '/events/',
+                        items: [
+                            {text : 'Global Event Bus', link : '/events/#the-main-event-bus'},
+                            {text : 'Store Event Bus', link : '/events/#store-event-bus'},
+                        ]
+                    },
+                    {
+                        text: 'Typing',
+                        link: '/events/typing',
+                    },
+                ]
+            },
+            {
+                text: 'Testing',
+                collapsible: true,
+                collapsed: false,
+                items: [
+                    {
+                        text: 'Setup',
+                        link: '/testing/',
+                    },
+                ]
+            },
+            {
                 text: 'Configuration',
                 link: '/config/stores',
                 items: [

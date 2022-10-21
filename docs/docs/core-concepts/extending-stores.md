@@ -44,13 +44,14 @@ Let's create `store_extensions.d.ts` in our project src dir
 
 ```typescript
 declare module '@idevelopthings/vue-class-stores/vue' {
-    export interface StoreCustomProperties {
+    interface StoreCustomProperties {
         apiBaseUrl: string;
         appVersion: string;
 
         getSomething(): string;
     }
 }
+export {}
 ```
 
 Now in our store:
