@@ -12,10 +12,12 @@ export default defineConfig({
 			dev       : true,
 			outputDir : '.vite-inspect',
 		}),
+
 		ClassStoresPlugin({
 			storesPath     : 'src/Test/Stores',
 			storesFileName : 'stores.d.ts',
 		}),
+
 		Vue(),
 	],
 	resolve : {

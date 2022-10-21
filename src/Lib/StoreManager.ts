@@ -1,13 +1,24 @@
 import {App} from "@vue/runtime-core";
-import {LifeCycleEvent} from "../Common/LifeCycle";
-import {DevTools} from "./../DevTools";
+import {flushPromises} from "@vue/test-utils";
+import type {VueWrapper, MountingOptions} from "@vue/test-utils";
+import {EffectScope, onScopeDispose} from "vue";
+import type {ComponentCustomProperties, ComponentPublicInstance} from "vue";
 import {Logger} from "./Logger";
+import {DevTools} from "./../DevTools";
+import {StoreManagerEventBus} from "./EventBus/StoreManagerEventBus";
 import type {StoreMetaData} from "./Meta/StoreMetaData";
-import type {StoreLoaderModule, StoreType} from "./Types";
+import type {TestingStoreType, StoreLoaderModule, StoreType} from "./Types";
+import {abortIfNotTesting, isTesting, vuePluginErrorMessage} from "./Utils";
+import StoreManagerComponent from "./StoreManagerComponent.vue";
 
+type ComponentOpts = Omit<ComponentPublicInstance, '$emit' | keyof ComponentCustomProperties> & {
+	$emit: (event: any, ...args: any[]) => void;
+} & ComponentCustomProperties;
 
 export class StoreManagerInstance {
 	private app: App;
+
+	public __scope: EffectScope;
 
 	private didInstantiateStores: boolean = false;
 
@@ -31,7 +42,34 @@ export class StoreManagerInstance {
 	 */
 	public storeBindingToClassName: { [key: string]: string } = {};
 
+	/**
+	 * Holds a reference of class name -> Store instance & Store constructor
+	 *
+	 * This is only used for testing
+	 */
+	public storeInjections: { [key: string]: { store: TestingStoreType, meta: StoreMetaData, storeConstructor: new(...args: any) => TestingStoreType } } = {};
+
+	public bus: StoreManagerEventBus = new StoreManagerEventBus();
+
 	private extensions: any[] = [];
+
+	constructor() {
+		if (isTesting()) {
+			this.app = {config : {globalProperties : {}}} as any;
+		}
+
+		this.runInScope(() => {});
+	}
+
+	public runInScope(fn: () => any) {
+		if (!this.__scope) this.__scope = new EffectScope();
+
+		this.__scope.run(() => {
+			fn();
+
+			onScopeDispose(() => this.__scope = undefined);
+		});
+	}
 
 	/**
 	 * The call to this method is transformed by the vite plugin
@@ -59,9 +97,40 @@ export class StoreManagerInstance {
 
 		return {
 			install : (app: App) => {
-				this.bootFromLoader(app, storeLoader as any);
+				this.app = app;
+
+				this.runInScope(() => this.bootFromLoader(app, storeLoader as any))
 			}
 		};
+	}
+
+	public bootForTesting() {
+		abortIfNotTesting();
+
+		return {
+			install : (app: App) => {
+				this.app = app;
+
+				this.runInScope(() => this.loadStoresFromInjections());
+			}
+		};
+	}
+
+	/**
+	 * Created a @vue/test-utils component instance with the store manager attached
+	 */
+	public async testComponentInstance(component?: any, options?: MountingOptions<any>): Promise<VueWrapper> {
+		options = options || {};
+
+		options.global         = options.global || {};
+		options.global.plugins = options.global.plugins || [];
+		options.global.plugins.push(this.bootForTesting());
+
+		const testUtils = await import("@vue/test-utils");
+		const vm        = testUtils.mount((component ?? StoreManagerComponent) as any, options);
+		await flushPromises();
+
+		return vm;
 	}
 
 	private bootFromLoader(app: App, storeLoader: StoreLoaderModule) {
@@ -79,36 +148,82 @@ export class StoreManagerInstance {
 		this.didInstantiateStores = true;
 	}
 
-	private callLifeCycleHandlers(handlers: (() => any)[], event: LifeCycleEvent) {
-		for (let handler of handlers) {
-			try {
-				handler();
-			} catch (e) {
-				Logger.label('StoreManager').error('Error during life cycle event: ' + event, e);
-			}
+	/**
+	 * This should only be used in tests
+	 *
+	 * It should be called before mounting your component, for example:
+	 *
+	 * ```
+	 *  const store = new TestStoreClass();
+	 * 	StoreManager.injectStore(store, TestStoreClass);
+	 *
+	 * 	const component = mount(Component, {
+	 * 		global : {plugins : [StoreManager.bootForTesting()]}
+	 * 	});
+	 * ```
+	 */
+	public injectStore(storeInstance: any, storeConstructor: new(...args: any) => any) {
+		abortIfNotTesting();
+
+		if (!storeInstance || !storeConstructor) {
+			throw new Error([
+				`To inject a store, you must first create an instance, then pass the instance and the class to this method.`,
+				`Example:`,
+				`const store = new MyStore();`,
+				`StoreManager.injectStore(store, MyStore);`,
+			].join('\n'));
 		}
+
+		if (!storeInstance?.___getMetaData) {
+			throw new Error([
+				`A method which is normally injected/created by the vue-class-stores vite plugin is missing.`,
+				`There is a chance you are doing something wrong, please check the docs and examples to make sure you are doing it right. https://vue-class-stores.idt.dev/`,
+				`But if you're sure that you are doing it right, ${vuePluginErrorMessage('missing ___getMetaData')}`,
+			].join('\n'));
+		}
+
+		const meta = storeInstance.___getMetaData();
+
+		this.storeInjections[meta.store.className] = {
+			meta  : meta,
+			store : storeInstance,
+			storeConstructor,
+		};
+
 	}
 
-	private loadStoresFromLoader(storeLoader: StoreLoaderModule): void {
-		const beforeAllHandlers = [];
-		const afterAllHandlers  = [];
+	/**
+	 * This should only be used in tests
+	 */
+	public loadStoresFromInjections(): void {
 
 		// Run all of the stores `pre init` stages and get their `beforeAll` and `afterAll` handlers
-		for (let store of storeLoader.stores) {
-			const instance = this.prepareStore(store);
-			instance.__preBooting();
-
-			beforeAllHandlers.push(instance.__getHook(LifeCycleEvent.BeforeAll));
-			afterAllHandlers.push(instance.__getHook(LifeCycleEvent.AfterAll));
+		for (let [className, {store, meta}] of Object.entries(this.storeInjections)) {
+			this.prepareStore(meta, store);
 		}
 
-		this.callLifeCycleHandlers(beforeAllHandlers, LifeCycleEvent.BeforeAll);
+		this.bus.$dispatchToAllStores('@BeforeAll');
 
 		for (let [className, store] of Object.entries(this.stores)) {
 			this.loadStore(store);
 		}
 
-		this.callLifeCycleHandlers(afterAllHandlers, LifeCycleEvent.AfterAll);
+		this.bus.$dispatchToAllStores('@AfterAll');
+	}
+
+	public loadStoresFromLoader(storeLoader: StoreLoaderModule): void {
+		// Run all of the stores `pre init` stages and get their `beforeAll` and `afterAll` handlers
+		for (let store of storeLoader.stores) {
+			this.prepareStore(store);
+		}
+
+		this.bus.$dispatchToAllStores('@BeforeAll');
+
+		for (let [className, store] of Object.entries(this.stores)) {
+			this.loadStore(store);
+		}
+
+		this.bus.$dispatchToAllStores('@AfterAll');
 	}
 
 	/**
@@ -116,15 +231,28 @@ export class StoreManagerInstance {
 	 * This is where it's imported, the binding/meta is setup and
 	 * the store is registered on our store manager.
 	 */
-	private prepareStore(meta: StoreMetaData) {
-		const store       = meta.getStoreExport();
-		store.__storeMeta = meta;
-		store.vueBinding  = meta.store.vueBinding;
+	private prepareStore(meta: StoreMetaData, storeInstance?: StoreType) {
+		// If storeInstance is provided, we're loading this store from an injection in a test
+		const store = storeInstance ?? meta.getStoreExport();
 
-		this.storeModules[meta.store.className]             = meta.getModule();
-		this.storeMeta[meta.store.className]                = meta;
-		this.stores[meta.store.className]                   = store;
-		this.storeBindingToClassName[meta.store.vueBinding] = meta.store.className;
+		/**
+		 * If we're loading an injected store, we need to do some monkey patching
+		 * - {@see StoreMetaData.getModule()} needs to return an object with the store instance, to emulate a module
+		 * - We need to manually set an export name for the store, so that it can be used in the module emulation
+		 * */
+		if (storeInstance) {
+			meta.store.exportName = '__injectedStore_' + meta.store.className;
+			meta.store.module     = () => {
+				return {
+					[meta.store.className]  : this.storeInjections[meta.store.className].storeConstructor,
+					[meta.store.exportName] : storeInstance
+				};
+			};
+		}
+
+
+		store.__bindStore(meta);
+		store.__preBooting();
 
 		return store;
 	}
@@ -140,7 +268,7 @@ export class StoreManagerInstance {
 		this.app.config.globalProperties[store.vueBinding] = store;
 
 		store.__addExtensions(this.extensions.map(extensionFunc => extensionFunc()));
-		store.__callHook(LifeCycleEvent.OnInit);
+		store.$dispatch('@OnInit', {store} as any);
 	}
 
 	private addExtensions() {

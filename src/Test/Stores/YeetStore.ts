@@ -101,7 +101,7 @@ export class NewYeetStore extends Store<NewYeetStore, INewYeetStore>() {
 	}
 
 	@OnInit
-	onInit() {
+	onInit({store}) {
 		console.log('hi from: ', this.constructor.name, 'onInit');
 	}
 

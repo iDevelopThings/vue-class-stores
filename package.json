@@ -30,7 +30,10 @@
     "build": "tsc && vite build",
     "dist": "node build.js",
     "preview": "vite preview",
-    "test": "vitest run --no-threads"
+    "test": "vitest run --no-threads",
+    "webstorm-integration": "vitest --watch --reporter=dot --reporter=json --outputFile=.vitest-result.json",
+    "tsc:types:lib": "tsc --declaration --emitDeclarationOnly --project ./tsconfig.lib.json",
+    "tsc:types:vite-pkg": "tsc --declaration --project ./tsconfig.vite-plugin.json"
   },
   "license": "MIT",
   "sideEffects": false,
@@ -84,6 +87,8 @@
   ],
   "dependencies": {
     "@idevelopthings/reflect-extensions": "^0.0.3",
+    "@rollup/plugin-typescript": "^9.0.1",
+    "@rollup/pluginutils": "^5.0.1",
     "@vue/devtools-api": "^6.4.4",
     "fs-jetpack": "^5.0.0",
     "klona": "^2.0.5",
@@ -91,10 +96,10 @@
     "lodash.set": "^4.3.2",
     "lodash.throttle": "^4.1.1",
     "lodash.uniq": "^4.5.0",
-    "vue": "^3.2.40",
-    "@rollup/pluginutils": "^5.0.1"
+    "vue": "^3.2.40"
   },
   "devDependencies": {
+    "@types/estree": "^1.0.0",
     "@types/lodash.get": "^4.4.7",
     "@types/lodash.set": "^4.3.7",
     "@types/lodash.throttle": "^4.1.7",

@@ -2,15 +2,15 @@ import path from "path";
 import ts from "typescript";
 import {formatVueBindingName} from "../../Common";
 import {LifeCycleEvent} from "../../Common/LifeCycle";
+import {isStateGetterNode, isVueBinding} from "../AstHelpers/Classes";
 import {hasDecorator} from "../AstHelpers/Modifiers";
 import {createLazyImportGlobNode} from "../Builders/Imports";
 import {createNodeFromValue, newClassInstance, UnwrappableNode, unwrappableNode} from "../Builders/Object";
 import {errorMessages} from "../ErrorMessages";
-import {debugLog, errorLog} from "../Logger";
+import {errorLog} from "../Logger";
 import {PluginConfig} from "../PluginConfig";
-import {TS} from "../TS";
 import {ProcessingContext} from "../Utils/ProcessingContext";
-import {type ActionMeta} from "./ActionMeta";
+import {ActionMeta} from "./ActionMeta";
 
 
 export type GetterSetterInfo = { n: string, c: boolean };
@@ -259,6 +259,51 @@ export class StoreMeta {
 		this.lifeCycleHandlers[method.name.getText()] = lifeCycleEvent;
 
 		this.metaObject.lifeCycleHandlers = this.lifeCycleHandlers;
+	}
+
+	process(declaration:ts.ClassDeclaration) {
+		// Store the class name for our store
+		this.className = declaration.name.text;
+
+		// Now we'll process the members of the class
+		// We need to extract Action meta & the vue binding(if one is defined)
+		for (let member of declaration.members) {
+
+			// Now we have to look for the `public static vueBinding = 'x';`
+			// statement and pull out it's value.
+			const [isBinding, vueBinding] = isVueBinding(member);
+			if (isBinding) {
+				this.vueBinding = vueBinding;
+				continue;
+			}
+
+			// Check if our member is an action, if it is we'll store some meta for it
+			if (ts.isMethodDeclaration(member) && ts.isIdentifier(member.name)) {
+				const action = new ActionMeta(member as ts.MethodDeclaration);
+				ProcessingContext.processingAction(action, () => {
+					this.addAction(action);
+				});
+
+				continue;
+			}
+
+			const [isStateGetter, stateObj] = isStateGetterNode(member);
+			if (isStateGetter && !this.stateObj) {
+				this.setStateObject(stateObj);
+
+				continue;
+			}
+
+			if (ts.isGetAccessor(member) && ts.isIdentifier(member.name)) {
+				this.addGetter(member);
+				continue;
+			}
+
+			if (ts.isSetAccessor(member) && ts.isIdentifier(member.name)) {
+				this.addSetter(member);
+			}
+
+		}
 	}
 
 	/**

@@ -1,3 +1,4 @@
+
 export {BaseStore, Store} from './Store';
 export {default as StoreManager, StoreManagerInstance} from './StoreManager';
 export {StoreMetaData} from './Meta/StoreMetaData';
@@ -23,10 +24,7 @@ export type {
 	StoreActionWithSubscriptions,
 } from './StoreTypes';
 
-export const Computed = (target: any, propertyKey: string) => {};
+export * from './EventBus';
 
-export const BeforeAll = (target: any, propertyKey: string) => {};
-export const OnInit    = (target: any, propertyKey: string) => {};
-export const OnDispose = (target: any, propertyKey: string) => {};
-export const AfterAll  = (target: any, propertyKey: string) => {};
 
+export {AfterAll, BeforeAll, OnInit, Computed, OnDispose, TestStore} from './Decorators';

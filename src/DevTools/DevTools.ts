@@ -320,6 +320,8 @@ export class DevtoolsInstance {
 	}
 
 	public actionSetup(action: StoreAction<any, any>): void {
+		if (!this.api) return;
+
 		this.currentAction = action;
 		const id           = this.currentGroupId++;
 

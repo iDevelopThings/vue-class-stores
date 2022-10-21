@@ -4,13 +4,13 @@ export const stores = [new StoreMetaData({
             storeFunction: new StoreMetaActionData({
                 n: "storeFunction",
                 p: [],
-                d: [],
+                d: {},
                 h: undefined
             }),
             errorFunction: new StoreMetaActionData({
                 n: "errorFunction",
                 p: [],
-                d: [],
+                d: {},
                 h: undefined
             }),
             storeFunctionWithArgs: new StoreMetaActionData({
@@ -28,13 +28,13 @@ export const stores = [new StoreMetaData({
                         t: "number",
                         dv: "20"
                     }],
-                d: [],
+                d: {},
                 h: undefined
             }),
             increment: new StoreMetaActionData({
                 n: "increment",
                 p: [],
-                d: [],
+                d: {},
                 h: undefined
             })
         },
@@ -83,13 +83,13 @@ export const stores = [new StoreMetaData({
             increment: new StoreMetaActionData({
                 n: "increment",
                 p: [],
-                d: [],
+                d: {},
                 h: undefined
             }),
             incrementRef: new StoreMetaActionData({
                 n: "incrementRef",
                 p: [],
-                d: [],
+                d: {},
                 h: undefined
             }),
             setNewMessage: new StoreMetaActionData({
@@ -99,13 +99,13 @@ export const stores = [new StoreMetaData({
                         t: "string",
                         dv: undefined
                     }],
-                d: [],
+                d: {},
                 h: undefined
             }),
             removeBanner: new StoreMetaActionData({
                 n: "removeBanner",
                 p: [],
-                d: [],
+                d: {},
                 h: undefined
             }),
             myTestFunc: new StoreMetaActionData({
@@ -115,13 +115,13 @@ export const stores = [new StoreMetaData({
                         t: "string",
                         dv: undefined
                     }],
-                d: [],
+                d: {},
                 h: undefined
             }),
             errorFunc: new StoreMetaActionData({
                 n: "errorFunc",
                 p: [],
-                d: [],
+                d: {},
                 h: undefined
             }),
             promiseFunc: new StoreMetaActionData({
@@ -131,19 +131,19 @@ export const stores = [new StoreMetaData({
                         t: "string",
                         dv: undefined
                     }],
-                d: [],
+                d: {},
                 h: undefined
             }),
             doThing: new StoreMetaActionData({
                 n: "doThing",
                 p: [],
-                d: [],
+                d: {},
                 h: undefined
             }),
             doSomething: new StoreMetaActionData({
                 n: "doSomething",
                 p: [],
-                d: [],
+                d: {},
                 h: undefined
             })
         },

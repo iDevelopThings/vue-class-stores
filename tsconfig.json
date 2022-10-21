@@ -39,8 +39,9 @@
   },
   "include": [
     "src/DevTools",
-    "src/Lib",
+    "src/Lib/**/*.ts",
     "src/Test",
+    "src/Tests",
     "src/VitePlugin"
   ],
   "exclude": [

@@ -1,6 +1,9 @@
 import {type WatchOptions} from "vue";
 import {SubscriptionCallbackInfo} from "../Common/Subscription";
 import type {Path, PathValue} from "./DotPath";
+import {Handler} from "./EventBus/EventBus";
+import {StoreEventBus} from "./EventBus/StoreEventBus";
+import {StoreEventsMap} from "./EventBus/StoreEventsMap";
 import {type BaseStore} from "./Store";
 
 export type Constructor = new (...args: any[]) => {};
@@ -24,6 +27,21 @@ export type BaseStoreImpl<TStore, TState> = /*BaseStore<TStore, TState>['$patch'
 	$patch(patchOperation: PatchOperationFunction<TState>): void
 	$patch(patchOperation: PatchOperationObject<TState>): void
 	$patch(patchOperation: any): void
+
+	$dispatch<Key extends keyof StoreEventsMap | string>(
+		type: Key,
+		payload?: Key extends keyof StoreEventsMap ? StoreEventsMap[Key] : any,
+	): void;
+	$on<Key extends keyof StoreEventsMap | string>(
+		type: Key,
+		handler: Handler<Key extends keyof StoreEventsMap ? StoreEventsMap[Key] : any>,
+	): () => void;
+	$off<Key extends keyof StoreEventsMap | string>(
+		type: Key,
+		handler: Handler<Key extends keyof StoreEventsMap ? StoreEventsMap[Key] : any>,
+	): void;
+
+	$eventBus: StoreEventBus;
 
 	$onAction(handler?: (context: StoreAction<TStore, TState>) => void): () => void;
 }

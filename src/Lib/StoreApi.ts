@@ -60,6 +60,14 @@ export class StoreApi {
 		return Object.entries(this.store.__getters);
 	}
 
+	getActionNames() {
+		return this.store.__storeMeta.actions.map(action => action.name);
+	}
+
+	getAction(name: string) {
+		return this.store.__storeMeta.actions.get(name);
+	}
+
 	getAllActions() {
 		return this.store.__storeMeta.actions.map(action => {
 			return [action.name, {

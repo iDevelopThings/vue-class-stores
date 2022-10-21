@@ -1,4 +1,5 @@
 import type {WritableComputedRef} from "@vue/reactivity";
+import {EffectScope} from "vue";
 import {LifeCycleEvent} from "../Common/LifeCycle";
 import type {StoreMetaActionData} from "./Meta/StoreMetaActionData";
 import type {StoreMetaData} from "./Meta/StoreMetaData";
@@ -8,16 +9,18 @@ import type {BaseStore} from "./Store";
 
 interface BaseStorePublic {
 	vueBinding: string;
+	__scope: EffectScope;
 	__storeMeta: StoreMetaData;
-	__getters: { [key: string]: StoreGetterInfo };
-	__actions: { [key: string]: (...args) => any };
+	__getters: StoreGettersList;
+	__setters: StoreSettersList;
+	__actions: StoreActionsList;
+	__lifecycleHooks: LifeCycleHooks;
 	__extensions: StoreExtensionDefinitions;
 }
 
-export type StoreType = {
-	                        [K in keyof typeof BaseStore['prototype']]: K extends keyof BaseStorePublic ? never : typeof BaseStore['prototype'][K]
-                        } & BaseStorePublic;
+export type StoreType = { [K in keyof typeof BaseStore['prototype']]: K extends keyof BaseStorePublic ? never : typeof BaseStore['prototype'][K] } & BaseStorePublic;
 
+export type TestingStoreType = { ___getMetaData(): StoreMetaData } & StoreType;
 
 export type LifeCycleHooks = {
 	[LifeCycleEvent.BeforeAll]?: () => void | PromiseLike<void>;
@@ -26,13 +29,17 @@ export type LifeCycleHooks = {
 	[LifeCycleEvent.AfterAll]?: () => void | PromiseLike<void>;
 }
 
-export type StoreMetaInfo = {
-	className: string;
-	exportName: string;
-	vueBinding: string;
+export type StoreMetaModuleData = { [key: string]: { [key: string]: any } }
+
+export type BasicStoreMetaInfo = {
+	className?: string;
+	exportName?: string;
+	vueBinding?: string;
+}
+export type StoreMetaInfo = BasicStoreMetaInfo & {
 	// Would be something like:
 	// {'SomeStore.ts' : {StoreName : StoreClass, storeExport : Store}}
-	module: () => { [key: string]: { [key: string]: any } };
+	module?: () => StoreMetaModuleData;
 }
 export type StoreMeta = {
 	store: StoreMetaInfo;

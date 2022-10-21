@@ -5,6 +5,10 @@ import {errorMessages} from "../ErrorMessages";
 import {errorLog} from "../Logger";
 import {ProcessingContext} from "../Utils/ProcessingContext";
 
+export type DecoratorMetaInfo = {
+	n: string;
+	p: { n: string, v: string }[]
+}
 export class ActionMeta {
 	/**
 	 * The name of the method
@@ -19,7 +23,8 @@ export class ActionMeta {
 	/**
 	 * The decorators defined on the method
 	 */
-	public decorators: SignatureMetaDecoratorInfo[] = [];
+	public decorators: { [key: string]: SignatureMetaDecoratorInfo }    = {};
+	public decoratorMeta: { [key: string]: DecoratorMetaInfo } = {};
 
 	/**
 	 * If we defined a lifecycle decorator on the method, we'll return it here
@@ -41,11 +46,11 @@ export class ActionMeta {
 		this.name   = methodMeta.name;
 		this.params = methodMeta.parameters;
 
-		this.decorators = extractDecoratorsFromSignature(this.method, decorator => {
-			return isLifeCycleEvent(decorator.expression.getText());
+		const decorators = extractDecoratorsFromSignature(this.method, (decorator, info) => {
+			return isLifeCycleEvent(info.name) || info.name === 'On';
 		});
 
-		for (let decorator of this.decorators) {
+		for (let decorator of decorators) {
 			this.setDecorator(decorator);
 		}
 	}
@@ -69,25 +74,42 @@ export class ActionMeta {
 	}
 
 	private setDecorator(decorator: SignatureMetaDecoratorInfo): void {
-		if (this.lifeCycleEventHandler) {
-			ProcessingContext.linter.error(
-				errorMessages.lifecycle.multipleLifeCycleHandlersDefinedForMethod(this.name, this.lifeCycleEventHandler),
-				this.method
-			);
+		if (isLifeCycleEvent(decorator.name)) {
+			if (this.lifeCycleEventHandler) {
+				ProcessingContext.linter.error(
+					errorMessages.lifecycle.multipleLifeCycleHandlersDefinedForMethod(this.name, this.lifeCycleEventHandler),
+					this.method
+				);
+
+				return;
+			}
+
+			ProcessingContext.store.addLifeCycleHandler(this.method, decorator.name as LifeCycleEvent);
+
+			this.lifeCycleEventHandler = decorator.name as LifeCycleEvent;
+
+			this.defineDecorator(decorator);
 
 			return;
 		}
 
-		ProcessingContext.store.addLifeCycleHandler(this.method, decorator.name as LifeCycleEvent);
+		this.defineDecorator(decorator);
+	}
 
-		this.lifeCycleEventHandler = decorator.name as LifeCycleEvent;
+	private defineDecorator(decorator: SignatureMetaDecoratorInfo) {
+		this.decorators[decorator.name] = decorator;
+
+		this.decoratorMeta[decorator.name] = {
+			n : decorator.name,
+			p : decorator.parameters.map(p => ({n : p.name, v : p.value})),
+		}
 	}
 
 	public toMetaObject() {
 		return {
 			n : this.name,
 			p : this.params.map(p => ({n : p.name, t : p.type, dv : p.defaultValue})),
-			d : this.decorators.map(d => ({n : d.name, p : d.parameters})),
+			d : this.decoratorMeta,
 			h : this.lifeCycleEventHandler,
 		};
 	}

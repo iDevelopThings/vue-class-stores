@@ -8,13 +8,16 @@ import dts                   from 'vite-plugin-dts';
 
 const __dirname = fileURLToPath(new URL('.', import.meta.url));
 
+/**
+ * @type {import('vite').UserConfig}
+ */
 const commonConfig = {
 	plugins : [
 		/*dts({
 		 tsConfigFilePath : "./tsconfig.json",
 		 insertTypesEntry : true,
 		 }),*/
-//		vue(),
+		vue(),
 	],
 	resolve : {
 		alias : {
@@ -32,15 +35,25 @@ const commonConfig = {
 				"typescript",
 				"fs-jetpack",
 				'path',
+				'@vue/devtools-api',
+				'@vue/compat',
+				'@vue/compiler-dom',
+				'@vue/compiler-sfc',
+				'@vue/runtime-core',
 			],
 			output   : {
-				globals : {
-					vue               : 'Vue',
-					klona             : 'klona',
-					'typescript'      : "ts",
-					'fs-jetpack'      : "jetpack",
-					'path'            : 'path',
-				},
+				/*globals : {
+					'@vue/devtools-api' : 'vue_devtools_api',
+					'@vue/compat'       : 'vue_compat',
+					'@vue/compiler-dom' : 'vue_compiler_dom',
+					'@vue/compiler-sfc' : 'vue_compiler_sfc',
+					'@vue/runtime-core' : 'vue_runtime_core',
+					'vue'               : 'Vue',
+					'klona'             : 'klona',
+					'typescript'        : "ts",
+					'fs-jetpack'        : "jetpack",
+					'path'              : 'path',
+				},*/
 			},
 		},
 	},
@@ -88,6 +101,9 @@ const libConfigs = {
 function forLib(key) {
 	const config = {...commonConfig};
 
+	if (config.plugins?.length) {
+		config.plugins = config.plugins.concat(libConfigs[key].plugins ?? []);
+	}
 	config.root         = __dirname;
 	config.build.lib    = libConfigs[key].lib;
 	config.build.outDir = libConfigs[key].outDir;
@@ -104,9 +120,9 @@ for (let lib in libConfigs) {
 	console.log('Done with', lib);
 }
 
-execSync(`tsc --declaration --emitDeclarationOnly --project ./tsconfig.lib.json`);
-execSync(`tsc --declaration --project ./tsconfig.vite-plugin.json`);
-execSync(`cp src/VitePlugin/package.json dist/VitePlugin/package.json`);
+execSync(`yarn run tsc:types:lib`, {stdio : 'inherit'});
+execSync(`yarn run tsc:types:vite-pkg`, {stdio : 'inherit'});
+execSync(`cp src/VitePlugin/package.json dist/VitePlugin/package.json`, {stdio : 'inherit'});
 
 fs.writeFileSync('./dist/index.d.ts', `\n
 export * from './Lib';

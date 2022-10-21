@@ -1,4 +1,3 @@
-
 type StoreSetterOrGetter = {
 	// Name of the getter
 	n: string,
@@ -7,20 +6,24 @@ type StoreSetterOrGetter = {
 }
 
 export class StoreMetaGetterSetterData {
-	#type: 'getter' | 'setter';
-	#data: StoreSetterOrGetter;
-	
+	private _type: 'getter' | 'setter';
+	private _data: StoreSetterOrGetter;
+
 	constructor(type: 'getter' | 'setter', data: StoreSetterOrGetter) {
-		this.#type = type;
-		this.#data = data;
+		this._type = type;
+		this._data = data;
 	}
-	
+
 	get name() {
-		return this.#data.n;
+		return this._data.n;
 	}
-	
+
 	get isComputed() {
-		return this.#data.c;
+		return this._data.c;
 	}
-	
+
+//	public static factory(): StoreBuilderGetterSetter {
+//		return new StoreBuilderGetterSetter();
+//	}
 }
+

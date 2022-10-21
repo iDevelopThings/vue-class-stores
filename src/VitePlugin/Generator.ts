@@ -5,10 +5,8 @@ import {extendsStore, isStateGetterNode, isVueBinding} from "./AstHelpers/Classe
 import {isExportConst} from "./AstHelpers/Exports";
 import {createStoreLoaderModule} from "./Builders/StoreLoader";
 import {createVueDtsFile} from "./Builders/VueDtsFile";
-import {errorMessages} from "./ErrorMessages";
 import {Linting} from "./Linting";
 import {basicLog, colors, errorLog, infoLog, successLog, warnLog} from "./Logger";
-import {ActionMeta} from "./Meta/ActionMeta";
 import {StoreMeta} from "./Meta/StoreMeta";
 import {PluginConfig} from "./PluginConfig";
 import {TS} from "./TS";
@@ -46,6 +44,7 @@ export class Context {
 		Timed.start('generator.init');
 
 		PluginConfig.setStoreFilePaths();
+
 		TS.setup();
 
 		this.reloadModules(false);
@@ -228,62 +227,13 @@ export class Context {
 			if (!ts.isIdentifier(statement.name)) continue;
 
 			ProcessingContext.processingStoreClass(statement, () => {
-				this.processClass(statement as ts.ClassDeclaration, store);
+				store.process(statement as ts.ClassDeclaration);
 			});
 		}
 
 		ProcessingContext.validate();
 
 		return store.isValid() ? store : undefined;
-	}
-
-	private processClass(statement: ts.ClassDeclaration, store: StoreMeta): boolean {
-
-		// Store the class name for our store
-		store.className = statement.name.text;
-
-		// Now we'll process the members of the class
-		// We need to extract Action meta & the vue binding(if one is defined)
-		for (let member of statement.members) {
-
-			// Now we have to look for the `public static vueBinding = 'x';`
-			// statement and pull out it's value.
-			const [isBinding, vueBinding] = isVueBinding(member);
-			if (isBinding) {
-				store.vueBinding = vueBinding;
-				continue;
-			}
-
-			// Check if our member is an action, if it is we'll store some meta for it
-			if (ts.isMethodDeclaration(member) && ts.isIdentifier(member.name)) {
-				const action = new ActionMeta(member as ts.MethodDeclaration);
-				ProcessingContext.processingAction(action, () => {
-					store.addAction(action);
-				});
-
-				continue;
-			}
-
-			const [isStateGetter, stateObj] = isStateGetterNode(member);
-			if (isStateGetter && !store.stateObj) {
-				store.setStateObject(stateObj);
-
-				continue;
-			}
-
-			if (ts.isGetAccessor(member) && ts.isIdentifier(member.name)) {
-				store.addGetter(member);
-				continue;
-			}
-
-			if (ts.isSetAccessor(member) && ts.isIdentifier(member.name)) {
-				store.addSetter(member);
-				continue;
-			}
-
-		}
-
-		return true;
 	}
 
 	public isStoreFile(path: string): boolean {

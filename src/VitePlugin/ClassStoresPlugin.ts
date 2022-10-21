@@ -1,9 +1,11 @@
+import typescript from "@rollup/plugin-typescript";
 import * as fs from "fs";
 import path from "path";
 import type {Plugin, ViteDevServer} from "vite";
 import {formatImportString} from "./Builders/Imports";
 import {PluginConfig, UserPluginConfig} from "./PluginConfig";
-import {MagicString, relativeify, walk} from "./Utils/ViteFunction";
+import TransformerFactory, {isTestingEnv} from "./Transformer";
+import {MagicString, walk} from "./Utils/ViteFunction";
 import {Context} from "./Generator";
 import {infoLog} from "./Logger";
 import type {AcornNode as AcornNode2} from 'rollup';
@@ -17,7 +19,7 @@ export function ClassStoresPlugin(configuration?: UserPluginConfig): Plugin {
 
 	let server: ViteDevServer;
 
-	return {
+	const plugin = {
 		name : 'class-stores-loader',
 
 		configResolved(config) {
@@ -146,6 +148,24 @@ export function ClassStoresPlugin(configuration?: UserPluginConfig): Plugin {
 			context.writeFiles();
 		},
 	};
+
+	if (isTestingEnv()) {
+		return [
+			plugin,
+			typescript({
+				transformers : {
+					before : [
+						{
+							type    : 'program',
+							factory : (program) => TransformerFactory(program),
+						},
+					],
+				},
+			})
+		] as any;
+	}
+
+	return plugin;
 }
 
 export default ClassStoresPlugin;

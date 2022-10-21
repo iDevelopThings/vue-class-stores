@@ -8,14 +8,14 @@ export type SignatureMetaParamInfo = {
 }
 export type SignatureMetaDecoratorInfo = {
 	name: string;
-	parameters: string[];
+	parameters: { name: string, value: string }[];
 }
 export type SignatureMetaInfo = {
 	name: string,
 	parameters: SignatureMetaParamInfo[],
 }
 
-export function extractDecoratorsFromSignature(method: ts.MethodDeclaration, validatorFunc?: (decorator: ts.Decorator) => boolean): SignatureMetaDecoratorInfo[] {
+export function extractDecoratorsFromSignature(method: ts.MethodDeclaration, validatorFunc?: (decorator: ts.Decorator, info: SignatureMetaDecoratorInfo) => boolean): SignatureMetaDecoratorInfo[] {
 	const decorators = ts.canHaveDecorators(method)
 		? ts.getDecorators(method)
 		: undefined;
@@ -35,8 +35,22 @@ export function extractDecoratorsFromSignature(method: ts.MethodDeclaration, val
 		};
 
 		if (ts.isCallExpression(expression)) {
-			decoratorInfo.name       = expression.expression.getText();
-			decoratorInfo.parameters = expression.arguments.map(arg => arg.getText());
+			const sig = TS.typeChecker.getResolvedSignature(expression);
+			if (sig) {
+				decoratorInfo.name = expression.expression.getText();
+				if (sig.parameters?.length) {
+					for (let i = 0; i < sig.parameters.length; i++) {
+						const parameterName  = sig.parameters[i].name;
+						const parameterValue = expression.arguments[i].getText();
+
+						decoratorInfo.parameters[i] = {
+							name  : parameterName,
+							value : parameterValue,
+						};
+					}
+				}
+			}
+
 		}
 
 		if (ts.isIdentifier(expression)) {
@@ -46,7 +60,7 @@ export function extractDecoratorsFromSignature(method: ts.MethodDeclaration, val
 		if (decoratorInfo.name === undefined) {
 			continue;
 		}
-		if (validatorFunc && !validatorFunc(decorator)) {
+		if (validatorFunc && !validatorFunc(decorator, decoratorInfo)) {
 			continue;
 		}
 

@@ -77,7 +77,9 @@ export class LoggerInstance {
 			parts.push(`${this._label} - `);
 		}
 
-		console.log(...parts, ...args);
+		const method = level === LoggerLevel.Error ? 'error' : 'log';
+
+		console[method](...parts, ...args);
 	}
 
 	debug(...args: any[]) {

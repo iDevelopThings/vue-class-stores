@@ -1,60 +1,62 @@
 import {LifeCycleEvent} from "../../Common/LifeCycle";
+import type {StoreMetaActionDecorator} from "./StoreMetaActionData";
 import type {StoreMetaActionData} from "./StoreMetaActionData";
 
 export class MetaList<IType, T = { [key: string]: IType }> {
-	
-	#items: T = {} as T;
-	
-	#keys: string[];
-	#values: IType[];
-	#entries: [string, IType][];
-	
+
+	private _items: T = {} as T;
+	private _keys: string[];
+	private _values: IType[];
+	private _entries: [string, IType][];
+
 	constructor(items: T) {
-		this.#items = items;
+		this._items = items;
 	}
-	
+
 	has(key: string): boolean {
-		return this.#items.hasOwnProperty(key);
+		return this._items.hasOwnProperty(key);
 	}
-	
+
 	get(key: string): IType {
-		return this.#items[key];
+		return this._items[key];
 	}
-	
-	set(key: string, value: IType) {
-		this.#items[key] = value;
-		
+
+	set(key: string, value: IType): IType {
+		this._items[key] = value;
+
 		// Reset the caches...
-		this.#keys    = undefined;
-		this.#values  = undefined;
-		this.#entries = undefined;
+		this._keys    = undefined;
+		this._values  = undefined;
+		this._entries = undefined;
+
+		return this._items[key];
 	}
-	
-	items(): T {
-		return this.#items;
+
+	get items(): T {
+		return this._items;
 	}
-	
+
 	keys(): string[] {
-		if (!this.#keys) {
-			this.#keys = Object.keys(this.#items);
+		if (!this._keys) {
+			this._keys = Object.keys(this._items);
 		}
-		return this.#keys;
+		return this._keys;
 	}
-	
+
 	values(): IType[] {
-		if (!this.#values) {
-			this.#values = Object.values(this.#items);
+		if (!this._values) {
+			this._values = Object.values(this._items);
 		}
-		return this.#values;
+		return this._values;
 	}
-	
+
 	entries(): [string, IType][] {
-		if (!this.#entries) {
-			this.#entries = Object.entries(this.#items);
+		if (!this._entries) {
+			this._entries = Object.entries(this._items);
 		}
-		return this.#entries;
+		return this._entries;
 	}
-	
+
 	map<TCallback extends (value: IType, key: string) => any>(callback: TCallback): ReturnType<TCallback>[] {
 		const mapped = [];
 		for (const [key, value] of this.entries()) {
@@ -62,7 +64,7 @@ export class MetaList<IType, T = { [key: string]: IType }> {
 		}
 		return mapped;
 	}
-	
+
 	filter<TCallback extends (value: IType, key: string) => boolean>(callback: TCallback): IType[] {
 		const filtered: IType[] = [];
 		for (const [key, value] of this.entries()) {
@@ -72,36 +74,49 @@ export class MetaList<IType, T = { [key: string]: IType }> {
 		}
 		return filtered;
 	}
-	
+
 	each<TCallback extends (value: IType, key: string) => any>(callback: TCallback): void {
 		for (const [key, value] of this.entries()) {
 			callback(value, key);
 		}
 	}
-	
+
 	* [Symbol.iterator](): IterableIterator<[string, IType]> {
 		for (const [key, value] of this.entries()) {
 			yield [key, value];
 		}
+	}
+
+	isEmpty() : boolean {
+		return this.keys().length === 0;
 	}
 }
 
 
 export class MetaActionList extends MetaList<StoreMetaActionData> {
 	#lifeCycleHandlers: { [K in keyof LifeCycleEvent]: StoreMetaActionData };
-	
+
 	lifeCycleHandlers() {
 		if (this.#lifeCycleHandlers) {
 			return this.#lifeCycleHandlers;
 		}
-		
+
 		this.#lifeCycleHandlers = {} as any;
 		for (const [key, value] of this.entries()) {
 			if (value.lifeCycleEvent) {
 				this.#lifeCycleHandlers[value.lifeCycleEvent] = value;
 			}
 		}
-		
-		
+
+
 	}
+}
+
+
+export class MetaDecoratorList extends MetaList<StoreMetaActionDecorator> {
+
+	hasDecorator(name:string) {
+		return this.has(name);
+	}
+
 }

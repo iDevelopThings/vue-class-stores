@@ -8,7 +8,7 @@ import TestingStoreComponent from './TestingStoreComponent.vue';
 test('creating and using a store', async () => {
 
 
-	const wrapper = mount(TestingStoreComponent, {});
+	/*const wrapper = mount(TestingStoreComponent, {});
 	await wrapper.get('button').trigger('click');
 	const res = wrapper.text();
 	expect(wrapper.text()).toContain('Result: Message: 1');
@@ -19,6 +19,6 @@ test('creating and using a store', async () => {
 
 	myTestStore.increment();
 	console.log(myTestStore.$getState('someValue'));
-	console.log(myTestStore);
+	console.log(myTestStore);*/
 
 });

@@ -27,7 +27,7 @@ export function extendsStore(classDeclaration: ts.ClassDeclaration) {
 			const callExpression = t.expression;
 			if (!ts.isIdentifier(callExpression.expression)) return false;
 
-			return callExpression.expression.text?.toLowerCase() === "store";
+			return callExpression.expression.text?.toLowerCase() === "store" || callExpression.expression.text?.toLowerCase() === "basestore";
 		});
 	});
 }

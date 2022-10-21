@@ -7,11 +7,6 @@ import path                from 'path';
 
 export default defineConfig({
 	plugins : [
-		/*dts({
-			tsConfigFilePath : "./tsconfig.json",
-			insertTypesEntry : true,
-		}),*/
-
 		Inspect({
 			dev       : true,
 			outputDir : '.vite-inspect',

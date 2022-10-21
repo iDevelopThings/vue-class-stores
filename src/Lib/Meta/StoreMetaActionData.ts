@@ -1,16 +1,30 @@
 import {LifeCycleEvent} from "../../Common/LifeCycle";
+import {MetaDecoratorList} from "./MetaList";
 
 export type StoreMetaAction = {
 	// Name of the action
-	n: string;
+	n?: string;
 	// Parameters of the action
-	p: StoreMetaActionParam[];
+	p?: StoreMetaActionParam[];
 	// Decorators defined on the action
-	d: string[]
+	d?: { [key: string]: StoreMetaActionDecorator };
 	// The life-cycle event for this action, if there is one
-	h: LifeCycleEvent | undefined
+	h?: LifeCycleEvent | undefined
 };
 
+export type StoreMetaActionDecoratorParam = {
+	// Name of the parameter
+	n: string,
+	// Value of the parameter
+	v: string,
+}
+
+export type StoreMetaActionDecorator = {
+	// Name of the decorator
+	n: string;
+	// Parameters of the decorator
+	p: StoreMetaActionDecoratorParam[];
+}
 export type StoreMetaActionParam = {
 	// Name of the param
 	n: string,
@@ -21,38 +35,44 @@ export type StoreMetaActionParam = {
 };
 
 export class StoreMetaActionData {
-	#data: StoreMetaAction;
-	
+	private _data: StoreMetaAction;
+	private _decorators: MetaDecoratorList;
+
 	constructor(data: StoreMetaAction) {
-		this.#data = data;
+		this._data       = data;
+		this._decorators = new MetaDecoratorList(this._data.d);
 	}
-	
+
 	get name() {
-		return this.#data.n;
+		return this._data.n;
 	}
-	
+
 	get lifeCycleEvent() {
-		return this.#data.h;
+		return this._data.h;
 	}
-	
-	get decorators() {
-		return this.#data.d;
+
+	get decorators(): MetaDecoratorList {
+		return this._decorators;
 	}
-	
+
 	get params() {
-		return this.#data.p;
+		return this._data.p;
 	}
-	
+
 	getParam(name: string): StoreMetaActionParam {
-		return this.#data.p[name];
+		return this._data.p[name];
 	}
-	
+
 	getParamNames(): string[] {
-		return Object.keys(this.#data.p);
+		return Object.keys(this._data.p);
 	}
-	
+
 	getParamValues(): StoreMetaActionParam[] {
-		return Object.values(this.#data.p);
+		return Object.values(this._data.p);
 	}
-	
+
+	//	public static factory<T, B extends (...args: any) => any = F.Function<[], any>>(): StoreBuilderAction<T, B> {
+	//		return new StoreBuilderAction<T, B>();
+	//	}
 }
+

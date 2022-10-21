@@ -3,18 +3,23 @@ import {WritableComputedOptions} from "@vue/reactivity";
 import {klona} from "klona";
 import get from 'lodash.get';
 import set from 'lodash.set';
-import {computed, EffectScope, effectScope, getCurrentScope, onScopeDispose, reactive, toRef, watch, WatchOptions} from "vue";
+import {computed, EffectScope, getCurrentScope, onScopeDispose, reactive, toRef, watch, WatchOptions} from "vue";
 import {mergeReactiveObjects, Subscription} from "../Common";
-import {LifeCycleEvent} from "../Common/LifeCycle";
+import {LifeCycleEvent, lifeCycleEventName} from "../Common/LifeCycle";
 import DevTools from "../DevTools/DevTools";
 import type {Path, PathValue} from "./DotPath";
+import {Handler} from "./EventBus/EventBus";
+import {StoreEventBus} from "./EventBus/StoreEventBus";
+import {StoreEventsMap} from "./EventBus/StoreEventsMap";
 import {Logger} from "./Logger";
 import {type StoreMetaData} from "./Meta/StoreMetaData";
 import {StoreMetaGetterSetterData} from "./Meta/StoreMetaGetterSetterData";
+import StoreManager from "./StoreManager";
 import type {BaseStoreClass, BaseStoreImpl, CustomWatchOptions, PatchOperationFunction, PatchOperationObject, StoreAction, StoreActionWithSubscriptions, WatchFunction, WatchHandler} from "./StoreTypes";
 import {ClassStoreSymbol, getDescriptorsGrouped, makeReactive} from "./StoreUtils";
-import {StoreGetterComputedInfo, StoreGetterInfo, StoreGetterRegularInfo} from "./Types";
+import {StoreGetterComputedInfo, StoreGetterRegularInfo} from "./Types";
 import type {LifeCycleHooks, StoreActionsList, StoreExtensionDefinitions, StoreGettersList, HotReloadChanges, StoreSettersList, StoreType} from "./Types";
+import {isTesting, vuePluginErrorMessage} from "./Utils";
 
 
 export class BaseStore<TStore, TState> implements BaseStoreImpl<TStore, TState> {
@@ -47,9 +52,35 @@ export class BaseStore<TStore, TState> implements BaseStoreImpl<TStore, TState> 
 	public __handlers: Subscription                                         = new Subscription();
 	public __actionHandlers: StoreActionWithSubscriptions<TStore, TState>[] = [];
 
+	public bus: StoreEventBus = new StoreEventBus();
 
 	constructor() {
 
+	}
+
+	__bindStore(meta: StoreMetaData) {
+		if (!meta.store.vueBinding) {
+			if (isTesting()) {
+				Logger.error(`There is no vue binding defined for the store "${meta.store.className}" in testing mode.`);
+				Logger.error(`As a fallback, the store will be bound as "$${meta.store.className}" in your vue templates.`);
+				Logger.error(`If you need a specific vue binding, defined 'public static vueBinding = "yourBinding"' on your store.`);
+				meta.store.vueBinding = `$${meta.store.className}`;
+			} else {
+				throw new Error([
+					`There is no vue binding defined for the store "${meta.store.className}".`,
+					vuePluginErrorMessage('missing vue binding')
+				].join('\n'));
+			}
+		}
+
+		this.__storeMeta         = meta;
+		(this as any).vueBinding = meta.store.vueBinding;
+
+		StoreManager.storeModules[meta.store.className] = meta.getModule();
+		StoreManager.storeMeta[meta.store.className]    = meta;
+		StoreManager.stores[meta.store.className]       = this as any;
+
+		StoreManager.storeBindingToClassName[meta.store.vueBinding] = meta.store.className;
 	}
 
 	__preBooting() {
@@ -62,16 +93,33 @@ export class BaseStore<TStore, TState> implements BaseStoreImpl<TStore, TState> 
 
 		Object.defineProperty(this, 'state', {value : {}, configurable : true});
 
-		for (let [method, event] of Object.entries(this.__storeMeta.lifeCycleHandlers)) {
-			this.__lifecycleHooks[event] = this.__wrapHookCall(event, this[method].bind(this));
+		// Binding any event handlers to the store
+		for (let [method, event] of this.__storeMeta.lifeCycleHandlers) {
+			this.bus.$on(lifeCycleEventName(event as LifeCycleEvent), this[method].bind(this));
+		}
+
+		// Handle any actions with an @On() decorator defined
+		// For these we need to register event handlers on the store
+		// Using the parameter set on the decorator as the event name
+		if (!this.__storeMeta.actions.isEmpty()) {
+			const listenerActions = this.__storeMeta.actions.filter(action => action.decorators.has('On'));
+			for (let action of listenerActions) {
+				const decorator = action.decorators.get('On');
+				if (!decorator || !decorator?.p?.length || decorator?.p[0]?.v === '') continue;
+				let eventName = decorator.p[0].v;
+				// Because we extract the value as a string via ts compiler, we need to remove any quotes
+				eventName     = eventName.replace(/['"]+/g, '');
+
+				// Set the event name to the decorator value and bind the method
+				this.bus.$on(eventName, this[action.name].bind(this));
+			}
 		}
 	}
 
 	__bootStore() {
 		Logger.label('Store').debug('Booting store', this.constructor.name);
 
-
-		this.__scope = effectScope(true);
+		this.__scope = new EffectScope();
 		this.__scope.run(() => {
 			this.#defineState();
 			this.#defineGetters();
@@ -94,8 +142,17 @@ export class BaseStore<TStore, TState> implements BaseStoreImpl<TStore, TState> 
 				Logger.label('Store').debug('Score scope disposed', this.constructor.name);
 				mutationWatcher();
 				devtoolsAction();
+
+				this.bus.removeAllListeners();
 			});
 		});
+
+		if (StoreManager.__scope) {
+			onScopeDispose(() => {
+				Logger.label('Store').debug('StoreManager Scope disposed', this.constructor.name);
+				this.__scope.stop(true);
+			});
+		}
 	}
 
 	/**
@@ -347,8 +404,11 @@ export class BaseStore<TStore, TState> implements BaseStoreImpl<TStore, TState> 
 	 * @private
 	 */
 	#defineAction(actionsKey: string) {
+
 		Object.defineProperty(this, actionsKey, {
-			value : (...args) => {
+			configurable : true,
+			enumerable   : true,
+			value        : (...args) => {
 				const action = this.__extensions.actions[actionsKey] ?? this.__actions[actionsKey];
 				if (!action) {
 					Logger.label('Store').warn(`Action "${actionsKey}" could not be found on: `, this.constructor.name);
@@ -416,6 +476,7 @@ export class BaseStore<TStore, TState> implements BaseStoreImpl<TStore, TState> 
 				return funcResult;
 			}
 		});
+
 	}
 
 	/**
@@ -450,6 +511,32 @@ export class BaseStore<TStore, TState> implements BaseStoreImpl<TStore, TState> 
 	 */
 	$getState<P extends Path<TState>>(path: P, defaultValue?: any): PathValue<TState, P> {
 		return get(this.__state, path, defaultValue);
+	}
+
+	get $eventBus(): StoreEventBus {
+		return this.bus;
+	}
+
+	$dispatch<Key extends keyof StoreEventsMap | string>(
+		type: Key,
+		payload?: Key extends keyof StoreEventsMap ? StoreEventsMap[Key] : any,
+	): void {
+		this.bus.$dispatch(type, payload);
+	}
+
+	$on<Key extends keyof StoreEventsMap | string>(
+		type: Key,
+		handler: Handler<Key extends keyof StoreEventsMap ? StoreEventsMap[Key] : any>,
+		detached: boolean = false
+	): () => void {
+		return this.bus.$on(type, handler, detached);
+	}
+
+	$off<Key extends keyof StoreEventsMap | string>(
+		type: Key,
+		handler: Handler<Key extends keyof StoreEventsMap ? StoreEventsMap[Key] : any>,
+	): void {
+		this.bus.$off(type, handler);
 	}
 
 	private __setState(path: string, value: any) {
@@ -593,29 +680,6 @@ export class BaseStore<TStore, TState> implements BaseStoreImpl<TStore, TState> 
 
 			this.#defineAction(key);
 		}
-	}
-
-	public __getHook(event: LifeCycleEvent) {
-		return this.__lifecycleHooks[event];
-	}
-
-	private __wrapHookCall(event: LifeCycleEvent, fn: () => any) {
-		return () => {
-			let result;
-			try {
-				result = fn();
-				if (result instanceof Promise) {
-					result.catch(e => Logger.label('LifeCycle - ' + event).error(e));
-				}
-			} catch (error) {
-				Logger.label('LifeCycle - ' + event).error(error);
-			}
-		};
-	}
-
-	public __callHook(event: LifeCycleEvent) {
-		const handler = this.__getHook(event);
-		return handler();
 	}
 
 	__processHotReloadChanges(changes: HotReloadChanges, newStore: { instance: StoreType, meta: StoreMetaData }) {

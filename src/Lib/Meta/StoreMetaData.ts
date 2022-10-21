@@ -6,17 +6,17 @@ import {MetaActionList, MetaList} from "./MetaList";
 import type {StoreMetaGetterSetterData} from "./StoreMetaGetterSetterData";
 
 export class StoreMetaData {
-	
+
 	public store: StoreMetaInfo;
-	
+
 	public stateKeys: string[];
 	public setters: MetaList<StoreMetaGetterSetterData>;
 	public getters: MetaList<StoreMetaGetterSetterData>;
 	public lifeCycleHandlers: MetaList<LifeCycleEvent | string>;
 	public actions: MetaActionList;
-	
+
 	#module: ReturnType<StoreMetaInfo['module']>;
-	
+
 	constructor(data: StoreMeta) {
 		this.store             = data.store;
 		this.stateKeys         = data.stateKeys;
@@ -25,41 +25,41 @@ export class StoreMetaData {
 		this.lifeCycleHandlers = new MetaList(data.lifeCycleHandlers);
 		this.actions           = new MetaActionList(data.actions);
 	}
-	
+
 	getModule(ignoreCache: boolean = false) {
 		if (this.#module && !ignoreCache) {
 			return this.#module;
 		}
-		
+
 		const storeModuleGlob = this.store.module();
 		if (!storeModuleGlob) {
 			throw new Error('Store lazy import; module is not defined. Meta: ' + this.store);
 		}
-		
+
 		const storeModule = Object.values(storeModuleGlob)[0];
 		if (!storeModule) {
 			throw new Error('Store module is not defined. Meta: ' + this.store);
 		}
-		
+
 		return this.#module = storeModule;
 	}
-	
+
 	getStoreExport(ignoreCache: boolean = false): StoreType {
 		const storeModule = this.getModule(ignoreCache);
 		if (!storeModule) {
 			throw new Error('Store module is not defined. Meta: ' + this.store);
 		}
-		
+
 		return storeModule[this.store.exportName];
 	}
-	
+
 	public compareChanges(__storeMeta: StoreMetaData): HotReloadChanges {
 		// First, we'll compare our new store meta with the old version
-		
+
 		const currentMeta = __storeMeta;
 		const newMeta     = this;
-		
-		
+
+
 		// We'll check for getters being added or removed
 		// We'll check for setters being added or removed
 		// We'll check for actions being added or removed
@@ -85,16 +85,44 @@ export class StoreMetaData {
 				if (this.actions.added.length > 0 || this.actions.removed.length > 0) {
 					return true;
 				}
-				
+
 				if (this.getters.added.length > 0 || this.getters.removed.length > 0) {
 					return true;
 				}
 				if (this.setters.added.length > 0 || this.setters.removed.length > 0) {
 					return true;
 				}
-				
+
 				return this.state.added.length > 0 || this.state.removed.length > 0;
 			}
 		};
 	}
+
+	/*public static createForModule(data: BasicStoreMetaInfo, module?: StoreMetaModuleData): StoreBuilder {
+		let moduleGetter = () => ({'module' : module});
+
+		// IF no module is specified, we'll be going into mock/builder mode
+		if (!module) {
+			const mockClass = class MockStore extends Store<any, any>() {
+				get state() {
+					return {}
+				}
+			}
+
+			const mockModule = {
+				[data.className]  : mockClass,
+				[data.exportName] : new mockClass(),
+			};
+			moduleGetter = () => ({'module' : mockModule});
+		}
+
+		const builder = new StoreBuilder({
+			exportName : data.exportName,
+			vueBinding : data.vueBinding,
+			className  : data.className,
+			module     : moduleGetter,
+		});
+
+		return builder;
+	}*/
 }
