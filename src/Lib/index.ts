@@ -27,4 +27,4 @@ export type {
 export * from './EventBus';
 
 
-export {AfterAll, BeforeAll, OnInit, Computed, OnDispose, TestStore} from './Decorators';
+export {AfterAll, BeforeAll, OnInit, Computed, OnDispose, On, TestStore} from './Decorators';
