@@ -1,6 +1,6 @@
 {
   "name": "@idevelopthings/vue-class-stores",
-  "version": "1.0.11",
+  "version": "1.0.12",
   "type": "module",
   "description": "Powerful class based stores for vue 3",
   "keywords": [
