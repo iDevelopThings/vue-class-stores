@@ -125,14 +125,18 @@ export class BaseStore<TStore, TState> implements BaseStoreImpl<TStore, TState> 
 			this.#defineGetters();
 			this.#defineActions();
 
-			const mutationWatcher = watch(() => JSON.parse(JSON.stringify((this as any).__state)), (newVal, oldVal) => {
-				Logger.label('Store').debug('Pre Mutation detected', this.constructor.name, {
-					newVal : newVal.banner?.message,
-					oldVal : oldVal.banner?.message
-				});
-				DevTools.stateMutation(this.constructor.name, newVal, oldVal);
-				DevTools.updateStore(this);
-			}, {deep : false, flush : 'sync'});
+			let mutationWatcher = () => {};
+			if(!StoreManager.options?.disableDevtoolsMutationWatcher)
+			{
+				mutationWatcher = watch(() => JSON.parse(JSON.stringify((this as any).__state)), (newVal, oldVal) => {
+					Logger.label('Store').debug('Pre Mutation detected', this.constructor.name, {
+						newVal : newVal.banner?.message,
+						oldVal : oldVal.banner?.message
+					});
+					DevTools.stateMutation(this.constructor.name, newVal, oldVal);
+					DevTools.updateStore(this);
+				}, {deep : false, flush : 'sync'});
+			}
 
 			const devtoolsAction = this.$onAction((action) => {
 				DevTools.actionSetup(action);

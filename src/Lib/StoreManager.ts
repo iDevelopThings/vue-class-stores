@@ -53,6 +53,8 @@ export class StoreManagerInstance {
 
 	private extensions: any[] = [];
 
+	public options: { disableDevtoolsMutationWatcher?: boolean };
+
 	constructor() {
 		if (isTesting()) {
 			this.app = {config : {globalProperties : {}}} as any;
@@ -69,6 +71,10 @@ export class StoreManagerInstance {
 
 			onScopeDispose(() => this.__scope = undefined);
 		});
+	}
+
+	public config(options: {disableDevtoolsMutationWatcher?: boolean}) {
+		this.options = options;
 	}
 
 	/**
