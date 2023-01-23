@@ -1,10 +1,11 @@
-import vue                   from '@vitejs/plugin-vue';
-import {execSync}            from 'child_process';
-import * as fs               from 'fs';
-import path                  from 'path';
-import {fileURLToPath}       from 'url';
-import {build, defineConfig} from 'vite';
-import dts                   from 'vite-plugin-dts';
+import vue                     from '@vitejs/plugin-vue';
+import { execSync }            from 'child_process';
+import * as fs                 from 'fs';
+import path                    from 'path';
+import { fileURLToPath }       from 'url';
+import { build, defineConfig } from 'vite';
+import dts                     from 'vite-plugin-dts';
+
 
 const __dirname = fileURLToPath(new URL('.', import.meta.url));
 
@@ -43,17 +44,17 @@ const commonConfig = {
 			],
 			output   : {
 				/*globals : {
-					'@vue/devtools-api' : 'vue_devtools_api',
-					'@vue/compat'       : 'vue_compat',
-					'@vue/compiler-dom' : 'vue_compiler_dom',
-					'@vue/compiler-sfc' : 'vue_compiler_sfc',
-					'@vue/runtime-core' : 'vue_runtime_core',
-					'vue'               : 'Vue',
-					'klona'             : 'klona',
-					'typescript'        : "ts",
-					'fs-jetpack'        : "jetpack",
-					'path'              : 'path',
-				},*/
+				 '@vue/devtools-api' : 'vue_devtools_api',
+				 '@vue/compat'       : 'vue_compat',
+				 '@vue/compiler-dom' : 'vue_compiler_dom',
+				 '@vue/compiler-sfc' : 'vue_compiler_sfc',
+				 '@vue/runtime-core' : 'vue_runtime_core',
+				 'vue'               : 'Vue',
+				 'klona'             : 'klona',
+				 'typescript'        : "ts",
+				 'fs-jetpack'        : "jetpack",
+				 'path'              : 'path',
+				 },*/
 			},
 		},
 	},
@@ -98,16 +99,17 @@ const libConfigs = {
 	},
 };
 
-function forLib(key) {
+function forLib(key)
+{
 	const config = {...commonConfig};
-
+	
 	if (config.plugins?.length) {
 		config.plugins = config.plugins.concat(libConfigs[key].plugins ?? []);
 	}
 	config.root         = __dirname;
 	config.build.lib    = libConfigs[key].lib;
 	config.build.outDir = libConfigs[key].outDir;
-
+	
 	return {
 		...defineConfig(config),
 		configFile : false,
@@ -122,7 +124,11 @@ for (let lib in libConfigs) {
 
 execSync(`yarn run tsc:types:lib`, {stdio : 'inherit'});
 execSync(`yarn run tsc:types:vite-pkg`, {stdio : 'inherit'});
-execSync(`cp src/VitePlugin/package.json dist/VitePlugin/package.json`, {stdio : 'inherit'});
+if (process.platform === 'win32') {
+	execSync(`copy "src/VitePlugin/package.json" "dist/VitePlugin/package.json"`, {stdio : 'inherit'});
+} else {
+	execSync(`cp src/VitePlugin/package.json dist/VitePlugin/package.json`, {stdio : 'inherit'});
+}
 
 fs.writeFileSync('./dist/index.d.ts', `\n
 export * from './Lib';
