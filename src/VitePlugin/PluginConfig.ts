@@ -40,20 +40,20 @@ class PluginConfigInstance {
 	 * For ex: stores.d.ts
 	 * @type {string}
 	 */
-	public storesFileName?: string = 'stores.d.ts';
+	public storesFileName?: string = "stores.d.ts";
 	/**
 	 * The name of the store loader file that will be generated
 	 * This contains an array of all the stores and their meta.
 	 * @type {string}
 	 */
-	public storeLoaderFile: string = 'StoreLoader.ts';
+	public storeLoaderFile: string = "StoreLoader.ts";
 
 	/**
 	 * The directory name inside the stores path where
 	 * all generated files will be written
 	 * @type {string}
 	 */
-	public generatedDirName: string = 'Generated';
+	public generatedDirName: string = "Generated";
 	/**
 	 * Filesystem instance for the generated files path
 	 * @type {typeof jetpack}
@@ -135,18 +135,18 @@ class PluginConfigInstance {
 	}
 
 	public setStoreFilePaths(): void {
-		startTimer('setStoreFilePaths');
+		startTimer("setStoreFilePaths");
 
 		this.storeFilePaths = this.storesDirectory.find({
 			directories : false,
 			files       : true,
 			recursive   : true,
-			matching    : ['*Store.ts', '*store.ts'],
+			matching    : ["*Store.ts", "*store.ts"],
 		}).map(
 			filePath => ts.sys.resolvePath(this.storesDirectory.path(filePath))
 		);
 
-		endTimer('setStoreFilePaths');
+		endTimer("setStoreFilePaths");
 	}
 
 	/**
@@ -163,11 +163,17 @@ class PluginConfigInstance {
 		return paths.includes(file);
 	}
 
-	public getRelativeLoaderImportPath(from:string) {
+	public getRelativeLoaderImportPath(from: string) {
 		return relativeify(path.relative(path.dirname(from), PluginConfig.storesDirectory.path(
 			PluginConfig.generatedDirName,
 			PluginConfig.storeLoaderFile
 		)));
+	}
+
+	public isStoreFilePath(fileName: string): boolean {
+		fileName = ts.sys.resolvePath(fileName);
+
+		return this.storeFilePaths.includes(fileName);
 	}
 }
 

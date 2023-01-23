@@ -65,7 +65,8 @@ export class Context {
 
 		this.modules = TS.program.getSourceFiles()
 			.reduce((acc, source) => {
-				if (!PluginConfig.storeFilePaths.includes(source.fileName)) {
+				const filePath = ts.sys.resolvePath(source.fileName);
+				if (!PluginConfig.isStoreFilePath(filePath)) {
 					return acc;
 				}
 				if (source.isDeclarationFile) {
@@ -77,7 +78,7 @@ export class Context {
 					store  : new StoreMeta(source),
 				});
 
-				this.addFileHash(source.fileName, source.getFullText());
+				this.addFileHash(filePath, source.getFullText());
 
 				return acc;
 			}, []);
