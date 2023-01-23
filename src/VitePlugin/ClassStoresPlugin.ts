@@ -118,10 +118,10 @@ export function ClassStoresPlugin(configuration?: UserPluginConfig): Plugin {
 			});
 
 			if (transformed) {
-				const dir          = path.dirname(id);
-				const storeImports = context.stores.map(
-					store => `'${formatImportString(path.relative(dir, store.absFilePath))}.ts'`
-				);
+//				const dir          = path.dirname(id);
+//				const storeImports = context.stores.map(
+//					store => `'${formatImportString(path.relative(dir, store.absFilePath))}.ts'`
+//				);
 
 				const loaderImport = PluginConfig.getRelativeLoaderImportPath(id);
 

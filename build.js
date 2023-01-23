@@ -125,7 +125,7 @@ for (let lib in libConfigs) {
 execSync(`yarn run tsc:types:lib`, {stdio : 'inherit'});
 execSync(`yarn run tsc:types:vite-pkg`, {stdio : 'inherit'});
 if (process.platform === 'win32') {
-	execSync(`copy "src/VitePlugin/package.json" "dist/VitePlugin/package.json"`, {stdio : 'inherit'});
+	execSync(`copy ".\\src\\VitePlugin\\package.json" ".\\dist\\VitePlugin\\package.json"`, {stdio : 'inherit'});
 } else {
 	execSync(`cp src/VitePlugin/package.json dist/VitePlugin/package.json`, {stdio : 'inherit'});
 }

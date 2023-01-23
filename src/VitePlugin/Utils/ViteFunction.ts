@@ -59,6 +59,9 @@ export function relativeify(relative) {
     if (!relative.startsWith('.')) {
         return './' + relative;
     }
+    if(relative.startsWith("..")){
+        return "./" + relative;
+    }
     return relative;
 }
 /**

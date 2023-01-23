@@ -59,7 +59,7 @@ export const stores = [new StoreMetaData({
             className: "MyTestStore",
             exportName: "myTestStore",
             vueBinding: "$myTest",
-            module: () => import.meta.glob("..\\TestingStore.ts", { eager: true })
+            module: () => import.meta.glob("./../TestingStore.ts", { eager: true })
         }
     }), new StoreMetaData({
         actions: {},
@@ -76,7 +76,7 @@ export const stores = [new StoreMetaData({
             className: "UserStore",
             exportName: "userStore",
             vueBinding: "$user",
-            module: () => import.meta.glob("..\\UserStore.ts", { eager: true })
+            module: () => import.meta.glob("./../UserStore.ts", { eager: true })
         }
     }), new StoreMetaData({
         actions: {
@@ -189,6 +189,6 @@ export const stores = [new StoreMetaData({
             className: "NewYeetStore",
             exportName: "yeetStore",
             vueBinding: "$newYeet",
-            module: () => import.meta.glob("..\\YeetStore.ts", { eager: true })
+            module: () => import.meta.glob("./../YeetStore.ts", { eager: true })
         }
     })];

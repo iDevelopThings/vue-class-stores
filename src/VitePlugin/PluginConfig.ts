@@ -4,6 +4,7 @@ import ts from "typescript";
 import {ResolvedConfig} from "vite";
 import {endTimer, startTimer} from "./Utils/Timed";
 import {relativeify} from "./Utils/ViteFunction";
+import {formatImport} from "./Utils/Paths";
 
 export type UserPluginConfig = {
 	projectRoot?: string;
@@ -164,10 +165,12 @@ class PluginConfigInstance {
 	}
 
 	public getRelativeLoaderImportPath(from: string) {
-		return relativeify(path.relative(path.dirname(from), PluginConfig.storesDirectory.path(
+		const norm = path.relative(path.dirname(from), PluginConfig.storesDirectory.path(
 			PluginConfig.generatedDirName,
 			PluginConfig.storeLoaderFile
-		)));
+		));
+
+		return formatImport(norm);
 	}
 
 	public isStoreFilePath(fileName: string): boolean {

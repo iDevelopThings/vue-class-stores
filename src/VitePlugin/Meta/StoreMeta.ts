@@ -11,6 +11,7 @@ import {errorLog} from "../Logger";
 import {PluginConfig} from "../PluginConfig";
 import {ProcessingContext} from "../Utils/ProcessingContext";
 import {ActionMeta} from "./ActionMeta";
+import {formatImport} from "../Utils/Paths";
 
 
 export type GetterSetterInfo = { n: string, c: boolean };
@@ -111,7 +112,7 @@ export class StoreMeta {
 	constructor(file: ts.SourceFile) {
 		this.absFilePath      = file.fileName;
 		this.name             = path.basename(file.fileName);
-		this.relStoreFilePath = path.relative(PluginConfig.generatedDir.path(), file.fileName);
+		this.relStoreFilePath = formatImport(path.relative(PluginConfig.generatedDir.path(), file.fileName));
 		this.loaderImportPath = this.relStoreFilePath;
 	}
 
@@ -141,8 +142,8 @@ export class StoreMeta {
 	 */
 	private formatVueBinding(): void {
 		if (this.vueBinding) {
-			if (!this.vueBinding.startsWith('$')) {
-				this.vueBinding = '$' + this.vueBinding;
+			if (!this.vueBinding.startsWith("$")) {
+				this.vueBinding = "$" + this.vueBinding;
 			}
 			return;
 		}
@@ -188,13 +189,13 @@ export class StoreMeta {
 	 * Add a getter definition to our store
 	 */
 	public addGetter(member: ts.GetAccessorDeclaration): void {
-		if (member.name.getText() === 'state') {
+		if (member.name.getText() === "state") {
 			return;
 		}
 
 		const getter: GetterSetterInfo = {
 			n : member.name.getText(),
-			c : hasDecorator(member, 'Computed'),
+			c : hasDecorator(member, "Computed"),
 		};
 
 		this.getters[getter.n] = getter;
@@ -233,7 +234,7 @@ export class StoreMeta {
 		const getter = declarations.find(d => ts.isGetAccessorDeclaration(d));
 		// We can only make it a computed property if there is a corresponding getter
 		if (getter) {
-			setterInfo.c = hasDecorator(getter, 'Computed');
+			setterInfo.c = hasDecorator(getter, "Computed");
 		}
 
 		this.setters[setterInfo.n] = setterInfo;
@@ -261,7 +262,7 @@ export class StoreMeta {
 		this.metaObject.lifeCycleHandlers = this.lifeCycleHandlers;
 	}
 
-	process(declaration:ts.ClassDeclaration) {
+	process(declaration: ts.ClassDeclaration) {
 		// Store the class name for our store
 		this.className = declaration.name.text;
 
