@@ -15,6 +15,7 @@
     "isolatedModules": true,
     "esModuleInterop": true,
     "keyofStringsOnly": true,
+    "ignoreDeprecations": "5.0",
     "skipLibCheck": true,
     "baseUrl": ".",
     "rootDir": "./src",

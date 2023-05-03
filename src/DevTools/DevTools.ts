@@ -9,7 +9,7 @@ import {BaseStore, StoreAction} from "../Lib";
 import {StoreApi} from "../Lib/StoreApi";
 import StoreManager from "../Lib/StoreManager";
 import {StoreGetterComputedInfo, StoreGetterRegularInfo} from "../Lib/Types";
-import type {PluginOptions} from "./types";
+import {PluginOptions} from "./Types";
 
 const inspectorId = 'vue-class-stores-plugin';
 

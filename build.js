@@ -4,7 +4,6 @@ import * as fs                 from 'fs';
 import path                    from 'path';
 import { fileURLToPath }       from 'url';
 import { build, defineConfig } from 'vite';
-import dts                     from 'vite-plugin-dts';
 
 
 const __dirname = fileURLToPath(new URL('.', import.meta.url));
@@ -14,10 +13,6 @@ const __dirname = fileURLToPath(new URL('.', import.meta.url));
  */
 const commonConfig = {
 	plugins : [
-		/*dts({
-		 tsConfigFilePath : "./tsconfig.json",
-		 insertTypesEntry : true,
-		 }),*/
 		vue(),
 	],
 	resolve : {
@@ -43,18 +38,6 @@ const commonConfig = {
 				'@vue/runtime-core',
 			],
 			output   : {
-				/*globals : {
-				 '@vue/devtools-api' : 'vue_devtools_api',
-				 '@vue/compat'       : 'vue_compat',
-				 '@vue/compiler-dom' : 'vue_compiler_dom',
-				 '@vue/compiler-sfc' : 'vue_compiler_sfc',
-				 '@vue/runtime-core' : 'vue_runtime_core',
-				 'vue'               : 'Vue',
-				 'klona'             : 'klona',
-				 'typescript'        : "ts",
-				 'fs-jetpack'        : "jetpack",
-				 'path'              : 'path',
-				 },*/
 			},
 		},
 	},
@@ -79,15 +62,6 @@ const libConfigs = {
 			formats  : ['es', 'cjs', 'umd', 'iife'],
 		},
 	},
-	/*	'VitePlugin' : {
-	 outDir : 'dist/VitePlugin',
-	 lib    : {
-	 name     : 'VueClassStoresVitePlugin',
-	 entry    : './src/VitePlugin/index.ts',
-	 fileName : 'index',
-	 formats  : ['es', 'cjs', 'umd', 'iife'],
-	 },
-	 },*/
 	'Common' : {
 		outDir : 'dist/Common',
 		lib    : {

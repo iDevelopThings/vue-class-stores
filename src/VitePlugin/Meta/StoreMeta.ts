@@ -234,7 +234,7 @@ export class StoreMeta {
 		const getter = declarations.find(d => ts.isGetAccessorDeclaration(d));
 		// We can only make it a computed property if there is a corresponding getter
 		if (getter) {
-			setterInfo.c = hasDecorator(getter, "Computed");
+			setterInfo.c = hasDecorator(getter as any, "Computed");
 		}
 
 		this.setters[setterInfo.n] = setterInfo;

@@ -3,15 +3,16 @@
 import * as path from "path";
 import {defineConfig} from 'vitest/config';
 import Vue from '@vitejs/plugin-vue';
-import Inspect from 'vite-plugin-inspect';
+// import Inspect from 'vite-plugin-inspect';
 import {ClassStoresPlugin} from "./src/VitePlugin";
+import {UserConfigExport} from "vitest/dist/config";
 
 export default defineConfig({
 	plugins : [
-		Inspect({
-			dev       : true,
-			outputDir : '.vite-inspect',
-		}),
+		// Inspect({
+		// 	dev       : true,
+		// 	outputDir : '.vite-inspect',
+		// }),
 
 		ClassStoresPlugin({
 			storesPath     : 'src/Test/Stores',
@@ -30,5 +31,5 @@ export default defineConfig({
 	test    : {
 		globals     : true,
 		environment : 'jsdom',
-	},
+	}
 });
